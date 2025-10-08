@@ -15,20 +15,23 @@ const WebcamGestureDetector = ({ onGestureDetected }: WebcamGestureDetectorProps
 
   useEffect(() => {
     let webcam: tmImage.Webcam | null = null;
+    let isActive = true;
 
     const initWebcam = async () => {
       try {
-        // For demo purposes, we'll create a simulated gesture detector
-        // In production, you would load your actual Teachable Machine model here
-        // const modelURL = "YOUR_MODEL_URL/model.json";
-        // const metadataURL = "YOUR_MODEL_URL/metadata.json";
-        // modelRef.current = await tmImage.load(modelURL, metadataURL);
+        // Load your Teachable Machine model
+        const modelURL = "https://teachablemachine.withgoogle.com/models/-veScKgsx/model.json";
+        const metadataURL = "https://teachablemachine.withgoogle.com/models/-veScKgsx/metadata.json";
         
+        modelRef.current = await tmImage.load(modelURL, metadataURL);
+        console.log("Model loaded successfully");
+        
+        // Initialize webcam
         webcam = new tmImage.Webcam(320, 320, true);
         await webcam.setup();
         await webcam.play();
         
-        if (webcamRef.current) {
+        if (webcamRef.current && webcam.webcam.srcObject) {
           webcamRef.current.srcObject = webcam.webcam.srcObject;
         }
         
@@ -36,38 +39,43 @@ const WebcamGestureDetector = ({ onGestureDetected }: WebcamGestureDetectorProps
         
         // Start prediction loop
         const predict = async () => {
-          if (webcam && modelRef.current) {
-            const prediction = await modelRef.current.predict(webcam.canvas);
-            // Process predictions here
-            // For demo, we'll simulate gesture detection
+          if (!isActive || !webcam || !modelRef.current) return;
+          
+          try {
+            webcam.update();
+            const predictions = await modelRef.current.predict(webcam.canvas);
+            
+            // Find the prediction with highest probability
+            const maxPrediction = predictions.reduce((max, pred) => 
+              pred.probability > max.probability ? pred : max
+            , predictions[0]);
+            
+            // Only update if confidence is above threshold
+            if (maxPrediction.probability > 0.7) {
+              const gestureName = maxPrediction.className;
+              setCurrentGesture(gestureName);
+              onGestureDetected(gestureName);
+            }
+          } catch (error) {
+            console.error("Prediction error:", error);
           }
           
-          // Simulate gesture detection for demo
-          simulateGestureDetection();
-          
-          animationFrameRef.current = requestAnimationFrame(predict);
+          if (isActive) {
+            animationFrameRef.current = requestAnimationFrame(predict);
+          }
         };
         
         predict();
       } catch (error) {
         console.error("Error initializing webcam:", error);
+        setCurrentGesture("Camera access denied or unavailable");
       }
-    };
-
-    const simulateGestureDetection = () => {
-      // This is a placeholder for the actual model predictions
-      // In production, this would be replaced by real model inference
-      const gestures = ["1 Finger (A)", "2 Fingers (B)", "3 Fingers (C)", "4 Fingers (D)", "5 Fingers (Next)", "Fist (Previous)"];
-      
-      // Random gesture simulation - replace with actual model output
-      const randomGesture = gestures[Math.floor(Math.random() * gestures.length)];
-      setCurrentGesture(randomGesture);
-      onGestureDetected(randomGesture);
     };
 
     initWebcam();
 
     return () => {
+      isActive = false;
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }

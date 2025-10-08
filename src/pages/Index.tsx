@@ -16,21 +16,24 @@ const Index = () => {
   const currentQuestion = quizQuestions[currentQuestionIndex];
 
   const handleGestureDetected = useCallback((gesture: string) => {
-    // Map gestures to actions
-    if (gesture.includes("1 Finger")) {
+    const gestureLower = gesture.toLowerCase();
+    
+    // Map your Teachable Machine class names to actions
+    // Adjust these based on your actual model's class names
+    if (gestureLower.includes("1") || gestureLower.includes("one") || gestureLower.includes("a")) {
       handleOptionSelect(0);
-    } else if (gesture.includes("2 Fingers")) {
+    } else if (gestureLower.includes("2") || gestureLower.includes("two") || gestureLower.includes("b")) {
       handleOptionSelect(1);
-    } else if (gesture.includes("3 Fingers")) {
+    } else if (gestureLower.includes("3") || gestureLower.includes("three") || gestureLower.includes("c")) {
       handleOptionSelect(2);
-    } else if (gesture.includes("4 Fingers")) {
+    } else if (gestureLower.includes("4") || gestureLower.includes("four") || gestureLower.includes("d")) {
       handleOptionSelect(3);
-    } else if (gesture.includes("5 Fingers")) {
+    } else if (gestureLower.includes("5") || gestureLower.includes("five") || gestureLower.includes("next") || gestureLower.includes("open")) {
       handleNext();
-    } else if (gesture.includes("Fist")) {
+    } else if (gestureLower.includes("fist") || gestureLower.includes("closed") || gestureLower.includes("previous") || gestureLower.includes("0")) {
       handlePrevious();
     }
-  }, [currentQuestionIndex, selectedOption]);
+  }, [currentQuestionIndex]);
 
   const handleOptionSelect = (index: number) => {
     setSelectedOption(index);
