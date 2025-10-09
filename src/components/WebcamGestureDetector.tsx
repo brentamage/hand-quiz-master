@@ -27,12 +27,30 @@ const WebcamGestureDetector = ({ onGestureDetected }: WebcamGestureDetectorProps
         
         modelRef.current = await tmImage.load(modelURL, metadataURL);
         
-        // Initialize webcam
+        // Initialize webcam with better error handling
         webcam = new tmImage.Webcam(320, 320, true);
-        await webcam.setup();
-        await webcam.play();
         
-        if (webcamRef.current && webcam.webcam.srcObject) {
+        try {
+          await webcam.setup({ facingMode: "user" });
+          await webcam.play();
+        } catch (webcamError) {
+          console.error("Teachable Machine webcam failed, trying native API:", webcamError);
+          
+          // Fallback to native browser API
+          if (webcamRef.current) {
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+              video: { 
+                width: 320, 
+                height: 320,
+                facingMode: "user"
+              } 
+            });
+            webcamRef.current.srcObject = stream;
+            await webcamRef.current.play();
+          }
+        }
+        
+        if (webcamRef.current && webcam.webcam && webcam.webcam.srcObject) {
           webcamRef.current.srcObject = webcam.webcam.srcObject;
         }
         
