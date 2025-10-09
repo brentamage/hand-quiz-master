@@ -10,6 +10,9 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Trophy, RotateCcw, CheckCircle, XCircle, Play, Sparkles, Target, Zap, Award, Star } from "lucide-react";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
+import { useSoundEffects, SoundToggle } from "@/components/SoundEffects";
+import AchievementNotification, { useAchievements } from "@/components/AchievementSystem";
+import BackToMenuButton from "@/components/BackToMenuButton";
 
 type GameState = 'welcome' | 'difficulty-select' | 'playing' | 'level-complete' | 'final-results';
 
@@ -32,6 +35,12 @@ const Index = () => {
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [answers, setAnswers] = useState<(number | null)[]>([]);
   const [levelResults, setLevelResults] = useState<LevelResult[]>([]);
+  const [correctStreak, setCorrectStreak] = useState(0);
+  const [levelStartTime, setLevelStartTime] = useState<number>(0);
+
+  // Sound effects and achievements
+  const soundEffects = useSoundEffects();
+  const { achievements, notification, checkAchievements, clearNotification } = useAchievements();
 
   const currentDifficulty = DIFFICULTY_ORDER[currentDifficultyIndex];
   const currentQuestion = questions[currentQuestionIndex];
@@ -100,7 +109,10 @@ const Index = () => {
     setCurrentQuestionIndex(0);
     setSelectedOption(null);
     setLevelResults([]);
+    setCorrectStreak(0);
+    setLevelStartTime(Date.now());
     setGameState('playing');
+    soundEffects.playWhoosh();
     toast.success(`${selectedDifficulty.toUpperCase()} level started!`, { duration: 2000 });
   };
 
@@ -114,7 +126,10 @@ const Index = () => {
     setAnswers(new Array(quizQuestions.length).fill(null));
     setCurrentQuestionIndex(0);
     setSelectedOption(null);
+    setCorrectStreak(0);
+    setLevelStartTime(Date.now());
     setGameState('playing');
+    soundEffects.playWhoosh();
     toast.success(`${nextDifficulty.toUpperCase()} level started!`, { duration: 2000 });
   };
 
@@ -124,6 +139,7 @@ const Index = () => {
     newAnswers[currentQuestionIndex] = index;
     setAnswers(newAnswers);
     
+    soundEffects.playClick();
     toast.success(`Option ${String.fromCharCode(65 + index)} selected`, {
       duration: 1500,
     });
@@ -145,12 +161,32 @@ const Index = () => {
 
   const handleNext = () => {
     if (currentQuestionIndex < questions.length - 1) {
+      // Check if current answer is correct for streak tracking
+      if (selectedOption !== null && selectedOption === currentQuestion.correctAnswer) {
+        setCorrectStreak(prev => prev + 1);
+      } else if (selectedOption !== null) {
+        setCorrectStreak(0);
+      }
+      
       setCurrentQuestionIndex(prev => prev + 1);
       setSelectedOption(answers[currentQuestionIndex + 1]);
+      soundEffects.playWhoosh();
       toast.info("Next question", { duration: 1000 });
     } else {
       // Level completed
       const score = calculateScore(answers, questions);
+      const timeSpent = Math.floor((Date.now() - levelStartTime) / 1000);
+      const percentage = Math.round((score / questions.length) * 100);
+      
+      // Play sound based on performance
+      if (percentage === 100) {
+        soundEffects.playLevelComplete();
+      } else if (percentage >= 70) {
+        soundEffects.playSuccess();
+      } else {
+        soundEffects.playError();
+      }
+      
       const levelResult: LevelResult = {
         difficulty: currentDifficulty,
         score,
@@ -161,6 +197,15 @@ const Index = () => {
       
       const newLevelResults = [...levelResults, levelResult];
       setLevelResults(newLevelResults);
+      
+      // Check achievements
+      checkAchievements({
+        score,
+        totalQuestions: questions.length,
+        timeSpent,
+        correctStreak,
+        difficulty: currentDifficulty
+      });
       
       // Check if there are more levels to complete
       const isLastLevel = currentDifficultyIndex === DIFFICULTY_ORDER.length - 1;
@@ -231,6 +276,10 @@ const Index = () => {
         
         {/* Content */}
         <ThemeToggle />
+        <SoundToggle />
+        {notification && (
+          <AchievementNotification achievement={notification} onClose={clearNotification} />
+        )}
         <div className="container mx-auto max-w-4xl relative z-10">
           <div className="text-center fade-in-up">
             <div className="mb-8">
@@ -244,14 +293,26 @@ const Index = () => {
               Test your knowledge using hand gestures. No mouse needed - just your hands!
             </p>
             
-            <Button
-              onClick={() => setGameState('difficulty-select')}
-              size="lg"
-              className="gap-3 bg-gradient-accent hover:opacity-90 px-12 py-8 text-2xl rounded-2xl transition-elegant hover:scale-105 shadow-elegant !text-black dark:!text-gray-100 backdrop-blur-sm"
-            >
-              <Play className="w-8 h-8 text-black dark:text-gray-100" />
-              Start Quiz
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <Button
+                onClick={() => setGameState('difficulty-select')}
+                size="lg"
+                className="gap-3 bg-gradient-accent hover:opacity-90 px-12 py-8 text-2xl rounded-2xl transition-elegant hover:scale-105 shadow-elegant !text-black dark:!text-gray-100 backdrop-blur-sm"
+              >
+                <Play className="w-8 h-8 text-black dark:text-gray-100" />
+                Start Quiz
+              </Button>
+              
+              <Button
+                onClick={() => window.location.href = '/showcase'}
+                size="lg"
+                variant="outline"
+                className="gap-3 px-12 py-8 text-xl rounded-2xl transition-elegant hover:scale-105 border-2 border-accent/50 hover:border-accent backdrop-blur-sm"
+              >
+                <Sparkles className="w-7 h-7 text-accent" />
+                View Features
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -262,7 +323,12 @@ const Index = () => {
   if (gameState === 'difficulty-select') {
     return (
       <div className="min-h-screen flex items-center justify-center py-12 px-4">
+        <BackToMenuButton />
         <ThemeToggle />
+        <SoundToggle />
+        {notification && (
+          <AchievementNotification achievement={notification} onClose={clearNotification} />
+        )}
         <div className="container mx-auto max-w-5xl">
           <div className="text-center mb-16 fade-in-up">
             <h1 className="text-6xl font-bold mb-4 text-shimmer">
@@ -343,7 +409,12 @@ const Index = () => {
 
     return (
       <div className="min-h-screen flex items-center justify-center py-12 px-4">
+        <BackToMenuButton />
         <ThemeToggle />
+        <SoundToggle />
+        {notification && (
+          <AchievementNotification achievement={notification} onClose={clearNotification} />
+        )}
         <div className="container mx-auto max-w-4xl">
           <div className="text-center fade-in-up">
             <Award className="w-24 h-24 mx-auto mb-6 text-accent animate-pulse" />
@@ -385,7 +456,12 @@ const Index = () => {
 
     return (
       <div className="min-h-screen py-12 px-4">
+        <BackToMenuButton />
         <ThemeToggle />
+        <SoundToggle />
+        {notification && (
+          <AchievementNotification achievement={notification} onClose={clearNotification} />
+        )}
         <div className="container mx-auto max-w-5xl">
           {/* Header */}
           <div className="text-center mb-12 fade-in-up">
@@ -522,7 +598,12 @@ const Index = () => {
   // Playing Screen
   return (
     <div className="min-h-screen py-12 px-4">
+      <BackToMenuButton />
       <ThemeToggle />
+      <SoundToggle />
+      {notification && (
+        <AchievementNotification achievement={notification} onClose={clearNotification} />
+      )}
       <div className="container mx-auto max-w-7xl">
         {/* Header */}
         <div className="text-center mb-12 fade-in-up">
