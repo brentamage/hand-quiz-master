@@ -11,23 +11,23 @@ const GestureGuide = () => {
   ];
 
   return (
-    <div className="gradient-card rounded-xl p-6 card-shadow border border-accent/20 max-w-md">
-      <div className="flex items-center gap-2 mb-4">
-        <Hand className="w-5 h-5 text-accent" />
-        <h3 className="font-bold text-lg text-foreground">Gesture Controls</h3>
+    <div className="gradient-card rounded-2xl p-8 shadow-elegant border border-accent/20 max-w-md hover-lift">
+      <div className="flex items-center gap-3 mb-6">
+        <Hand className="w-6 h-6 text-accent transition-elegant" />
+        <h3 className="font-bold text-xl text-foreground">Gesture Controls</h3>
       </div>
       
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-4">
         {gestures.map((gesture, index) => (
           <div
             key={index}
-            className="bg-secondary/50 rounded-lg p-3 border border-border hover:border-accent/30 transition-colors"
+            className="bg-secondary/50 rounded-xl p-4 border border-border hover:border-accent/30 transition-elegant hover:scale-105 hover:bg-secondary/70"
           >
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-2xl">{gesture.icon}</span>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-3xl">{gesture.icon}</span>
               <span className="text-sm font-semibold text-muted-foreground">{gesture.fingers}</span>
             </div>
-            <p className="text-xs text-foreground/80">{gesture.action}</p>
+            <p className="text-sm text-foreground/90">{gesture.action}</p>
           </div>
         ))}
       </div>

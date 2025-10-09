@@ -26,7 +26,6 @@ const WebcamGestureDetector = ({ onGestureDetected }: WebcamGestureDetectorProps
         const metadataURL = "https://teachablemachine.withgoogle.com/models/-veScKgsx/metadata.json";
         
         modelRef.current = await tmImage.load(modelURL, metadataURL);
-        console.log("Model loaded successfully");
         
         // Initialize webcam
         webcam = new tmImage.Webcam(320, 320, true);
@@ -97,29 +96,29 @@ const WebcamGestureDetector = ({ onGestureDetected }: WebcamGestureDetectorProps
   }, [onGestureDetected]);
 
   return (
-    <div className="flex flex-col items-center gap-4">
+    <div className="flex flex-col items-center gap-6">
       <div className="relative">
         <video
           ref={webcamRef}
           autoPlay
           playsInline
           muted
-          className="rounded-lg border-2 border-accent/30 card-shadow w-80 h-80 object-cover"
+          className="rounded-2xl border-2 border-accent/30 shadow-elegant w-80 h-80 object-cover transition-elegant hover:border-accent/50"
           style={{ transform: 'scaleX(-1)' }}
         />
         {!isModelLoaded && (
-          <div className="absolute inset-0 flex items-center justify-center bg-card/80 rounded-lg">
+          <div className="absolute inset-0 flex items-center justify-center bg-card/90 rounded-2xl backdrop-blur-sm">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent mx-auto mb-4"></div>
-              <p className="text-foreground">Loading camera...</p>
+              <div className="animate-spin rounded-full h-14 w-14 border-b-2 border-accent mx-auto mb-4"></div>
+              <p className="text-foreground text-lg font-medium">Loading camera...</p>
             </div>
           </div>
         )}
       </div>
       
-      <div className="gradient-card rounded-lg px-6 py-4 card-shadow border border-accent/20">
-        <p className="text-sm text-muted-foreground mb-1">Current Gesture</p>
-        <p className="text-xl font-bold text-accent animate-pulse-glow">{currentGesture}</p>
+      <div className="gradient-card rounded-xl px-8 py-5 shadow-elegant border border-accent/20 transition-elegant hover:border-accent/40">
+        <p className="text-sm text-muted-foreground mb-2 uppercase tracking-wider">Current Gesture</p>
+        <p className="text-2xl font-bold text-accent animate-pulse-glow">{currentGesture}</p>
       </div>
     </div>
   );
