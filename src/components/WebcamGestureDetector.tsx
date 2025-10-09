@@ -12,6 +12,8 @@ const WebcamGestureDetector = ({ onGestureDetected }: WebcamGestureDetectorProps
   const [currentGesture, setCurrentGesture] = useState<string>("No gesture detected");
   const modelRef = useRef<tmImage.CustomMobileNet | null>(null);
   const animationFrameRef = useRef<number>();
+  const lastGestureRef = useRef<string>("");
+  const lastDetectionTimeRef = useRef<number>(0);
 
   useEffect(() => {
     let webcam: tmImage.Webcam | null = null;
@@ -51,10 +53,19 @@ const WebcamGestureDetector = ({ onGestureDetected }: WebcamGestureDetectorProps
             , predictions[0]);
             
             // Only update if confidence is above threshold
-            if (maxPrediction.probability > 0.7) {
+            if (maxPrediction.probability > 0.8) {
               const gestureName = maxPrediction.className;
               setCurrentGesture(gestureName);
-              onGestureDetected(gestureName);
+              
+              // Debounce: only trigger if gesture changed and 2 seconds have passed
+              const now = Date.now();
+              if (gestureName !== lastGestureRef.current && now - lastDetectionTimeRef.current > 2000) {
+                lastGestureRef.current = gestureName;
+                lastDetectionTimeRef.current = now;
+                onGestureDetected(gestureName);
+              }
+            } else {
+              setCurrentGesture("No gesture detected");
             }
           } catch (error) {
             console.error("Prediction error:", error);
@@ -94,6 +105,7 @@ const WebcamGestureDetector = ({ onGestureDetected }: WebcamGestureDetectorProps
           playsInline
           muted
           className="rounded-lg border-2 border-accent/30 card-shadow w-80 h-80 object-cover"
+          style={{ transform: 'scaleX(-1)' }}
         />
         {!isModelLoaded && (
           <div className="absolute inset-0 flex items-center justify-center bg-card/80 rounded-lg">
