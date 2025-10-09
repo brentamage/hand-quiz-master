@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import WebcamGestureDetector from "@/components/WebcamGestureDetector";
 import QuizQuestion from "@/components/QuizQuestion";
 import ProgressBar from "@/components/ProgressBar";
@@ -28,6 +29,7 @@ interface LevelResult {
 }
 
 const Index = () => {
+  const navigate = useNavigate();
   const [gameState, setGameState] = useState<GameState>('welcome');
   const [currentDifficultyIndex, setCurrentDifficultyIndex] = useState(0);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -304,7 +306,7 @@ const Index = () => {
               </Button>
               
               <Button
-                onClick={() => window.location.href = '/showcase'}
+                onClick={() => navigate('/showcase')}
                 size="lg"
                 variant="outline"
                 className="gap-3 px-12 py-8 text-xl rounded-2xl transition-elegant hover:scale-105 border-2 border-accent/50 hover:border-accent backdrop-blur-sm"
