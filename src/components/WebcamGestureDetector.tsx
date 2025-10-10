@@ -108,9 +108,9 @@ const WebcamGestureDetector = ({ onGestureDetected, onPerformanceDetected }: Web
         setLoadingMessage("Initializing camera...");
         
         // Try Teachable Machine webcam first
-        // Using 224x224 for better performance (change to 160x160 for even lower quality)
+        // Using 160x160 for much better performance and less lag
         try {
-          const webcam = new tmImage.Webcam(224, 224, true);
+          const webcam = new tmImage.Webcam(160, 160, true);
           await webcam.setup({ facingMode: "user" });
           await webcam.play();
           webcamInstanceRef.current = webcam;
@@ -172,25 +172,20 @@ const WebcamGestureDetector = ({ onGestureDetected, onPerformanceDetected }: Web
               pred.probability > max.probability ? pred : max
             , predictions[0]);
             
-            // Only update if confidence is above threshold
-            if (maxPrediction.probability > 0.8) {
+            // Only update if confidence is above threshold (lowered for better detection)
+            if (maxPrediction.probability > 0.7) {
               const gestureName = maxPrediction.className;
               setCurrentGesture(gestureName);
               
-              // Debounce: only trigger if gesture changed and 2 seconds have passed
+              // Debounce: only trigger if gesture changed and 1 second has passed (reduced for faster response)
               const detectionNow = Date.now();
-              if (gestureName !== lastGestureRef.current && detectionNow - lastDetectionTimeRef.current > 2000) {
+              if (gestureName !== lastGestureRef.current && detectionNow - lastDetectionTimeRef.current > 1000) {
                 lastGestureRef.current = gestureName;
                 lastDetectionTimeRef.current = detectionNow;
                 onGestureDetected(gestureName);
               }
             } else {
               setCurrentGesture("No gesture detected");
-            }
-            
-            // Monitor memory every 100 predictions
-            if (Math.random() < 0.01) {
-              monitorMemory(100);
             }
             
           } catch (error) {
