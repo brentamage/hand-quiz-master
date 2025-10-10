@@ -167,7 +167,7 @@ const Index = () => {
   const handleNext = () => {
     if (currentQuestionIndex < questions.length - 1) {
       // Check if current answer is correct for streak tracking
-      if (selectedOption !== null && selectedOption === currentQuestion.correctAnswer) {
+      if (currentQuestion && selectedOption !== null && selectedOption === currentQuestion.correctAnswer) {
         setCorrectStreak(prev => prev + 1);
       } else if (selectedOption !== null) {
         setCorrectStreak(0);
@@ -646,12 +646,14 @@ const Index = () => {
               total={questions.length} 
             />
             
-            <QuizQuestion
-              question={currentQuestion.question}
-              options={currentQuestion.options}
-              selectedOption={selectedOption}
-              onOptionSelect={handleOptionSelect}
-            />
+            {currentQuestion && (
+              <QuizQuestion
+                question={currentQuestion.question}
+                options={currentQuestion.options}
+                selectedOption={selectedOption}
+                onOptionSelect={handleOptionSelect}
+              />
+            )}
 
             {/* Navigation Buttons */}
             <div className="flex gap-5 w-full max-w-2xl">
