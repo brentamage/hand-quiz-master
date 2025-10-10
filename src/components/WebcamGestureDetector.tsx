@@ -1,68 +1,188 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import * as tf from "@tensorflow/tfjs";
 import * as tmImage from "@teachablemachine/image";
+import CameraErrorHandler from "./CameraErrorHandler";
+import { 
+  getDeviceCapabilities, 
+  requestCameraAccess, 
+  getRecommendedSettings,
+  checkWebGLSupport 
+} from "@/utils/deviceCapabilities";
+import { 
+  cleanup, 
+  monitorMemory, 
+  MemoryMonitor,
+  isMemoryCritical 
+} from "@/utils/memoryManager";
+import { toast } from "sonner";
 
 interface WebcamGestureDetectorProps {
   onGestureDetected: (gesture: string) => void;
+  onPerformanceDetected?: (performance: 'high' | 'medium' | 'low') => void;
 }
 
-const WebcamGestureDetector = ({ onGestureDetected }: WebcamGestureDetectorProps) => {
+const WebcamGestureDetector = ({ onGestureDetected, onPerformanceDetected }: WebcamGestureDetectorProps) => {
   const webcamRef = useRef<HTMLVideoElement>(null);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const [currentGesture, setCurrentGesture] = useState<string>("No gesture detected");
+  const [error, setError] = useState<string | null>(null);
+  const [loadingMessage, setLoadingMessage] = useState<string>("Initializing...");
+  const [inferenceTime, setInferenceTime] = useState<number>(0);
+  
   const modelRef = useRef<tmImage.CustomMobileNet | null>(null);
+  const webcamInstanceRef = useRef<tmImage.Webcam | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const animationFrameRef = useRef<number>();
   const lastGestureRef = useRef<string>("");
   const lastDetectionTimeRef = useRef<number>(0);
+  const memoryMonitorRef = useRef<MemoryMonitor | null>(null);
+  const predictionIntervalRef = useRef<number>(100); // Default 10 FPS
+  const lastPredictionTimeRef = useRef<number>(0);
 
+  // Initialize device capabilities and memory monitoring
   useEffect(() => {
-    let webcam: tmImage.Webcam | null = null;
+    const init = async () => {
+      try {
+        // Check device capabilities
+        setLoadingMessage("Checking device capabilities...");
+        const capabilities = await getDeviceCapabilities();
+        
+        // Check WebGL support
+        const { webgl } = checkWebGLSupport();
+        if (!webgl) {
+          setError("WebGL is not supported on this device. The app may not work properly.");
+          toast.error("WebGL not supported", { duration: 5000 });
+          return;
+        }
+
+        // Set TensorFlow.js backend
+        await tf.setBackend('webgl');
+        await tf.ready();
+        
+        // Get recommended settings based on device performance
+        const settings = getRecommendedSettings(capabilities.performance);
+        predictionIntervalRef.current = settings.predictionInterval;
+        
+        if (onPerformanceDetected) {
+          onPerformanceDetected(capabilities.performance);
+        }
+
+        // Notify user of device performance
+        if (capabilities.performance === 'low') {
+          toast.warning("Low-end device detected. Performance may be limited.", { duration: 5000 });
+        }
+
+        // Initialize memory monitor
+        memoryMonitorRef.current = new MemoryMonitor(100);
+        memoryMonitorRef.current.start(5000);
+        memoryMonitorRef.current.onUpdate((memory) => {
+          if (isMemoryCritical()) {
+            toast.error("High memory usage detected. Consider refreshing the page.", { duration: 5000 });
+          }
+        });
+
+      } catch (err: any) {
+        console.error("Initialization error:", err);
+        setError(err.message || "Failed to initialize");
+      }
+    };
+
+    init();
+
+    return () => {
+      if (memoryMonitorRef.current) {
+        memoryMonitorRef.current.stop();
+      }
+    };
+  }, [onPerformanceDetected]);
+
+  // Main webcam and model initialization
+  useEffect(() => {
     let isActive = true;
 
     const initWebcam = async () => {
       try {
-        // Load your Teachable Machine model
+        setLoadingMessage("Loading AI model...");
+        
+        // Load Teachable Machine model
         const modelURL = "https://teachablemachine.withgoogle.com/models/-veScKgsx/model.json";
         const metadataURL = "https://teachablemachine.withgoogle.com/models/-veScKgsx/metadata.json";
         
         modelRef.current = await tmImage.load(modelURL, metadataURL);
+        console.log("Model loaded successfully");
         
-        // Initialize webcam with better error handling
-        webcam = new tmImage.Webcam(320, 320, true);
+        setLoadingMessage("Requesting camera access...");
         
+        // Request camera access with proper error handling
+        const cameraResult = await requestCameraAccess();
+        
+        if (!cameraResult.success) {
+          setError(cameraResult.error || "Failed to access camera");
+          return;
+        }
+
+        streamRef.current = cameraResult.stream!;
+        
+        setLoadingMessage("Initializing camera...");
+        
+        // Try Teachable Machine webcam first
         try {
+          const webcam = new tmImage.Webcam(320, 320, true);
           await webcam.setup({ facingMode: "user" });
           await webcam.play();
-        } catch (webcamError) {
-          console.error("Teachable Machine webcam failed, trying native API:", webcamError);
+          webcamInstanceRef.current = webcam;
           
-          // Fallback to native browser API
-          if (webcamRef.current) {
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-              video: { 
-                width: 320, 
-                height: 320,
-                facingMode: "user"
-              } 
-            });
-            webcamRef.current.srcObject = stream;
+          if (webcamRef.current && webcam.webcam && webcam.webcam.srcObject) {
+            webcamRef.current.srcObject = webcam.webcam.srcObject;
+          }
+        } catch (webcamError) {
+          console.warn("Teachable Machine webcam failed, using native stream:", webcamError);
+          
+          // Fallback to native stream
+          if (webcamRef.current && streamRef.current) {
+            webcamRef.current.srcObject = streamRef.current;
             await webcamRef.current.play();
           }
         }
         
-        if (webcamRef.current && webcam.webcam && webcam.webcam.srcObject) {
-          webcamRef.current.srcObject = webcam.webcam.srcObject;
-        }
-        
         setIsModelLoaded(true);
+        setError(null);
+        toast.success("Camera initialized successfully!");
         
-        // Start prediction loop
+        // Start prediction loop with throttling
         const predict = async () => {
-          if (!isActive || !webcam || !modelRef.current) return;
+          if (!isActive || !modelRef.current) return;
+          
+          const now = performance.now();
+          
+          // Throttle predictions based on device performance
+          if (now - lastPredictionTimeRef.current < predictionIntervalRef.current) {
+            animationFrameRef.current = requestAnimationFrame(predict);
+            return;
+          }
+          
+          lastPredictionTimeRef.current = now;
           
           try {
-            webcam.update();
-            const predictions = await modelRef.current.predict(webcam.canvas);
+            const startTime = performance.now();
+            
+            let predictions;
+            
+            if (webcamInstanceRef.current) {
+              webcamInstanceRef.current.update();
+              predictions = await modelRef.current.predict(webcamInstanceRef.current.canvas);
+            } else if (webcamRef.current) {
+              predictions = await modelRef.current.predict(webcamRef.current);
+            } else {
+              return;
+            }
+            
+            const endTime = performance.now();
+            const inferenceMs = Math.round(endTime - startTime);
+            setInferenceTime(inferenceMs);
+            
+            // Dispatch event for performance monitor
+            window.dispatchEvent(new CustomEvent('inferenceTime', { detail: inferenceMs }));
             
             // Find the prediction with highest probability
             const maxPrediction = predictions.reduce((max, pred) => 
@@ -75,15 +195,21 @@ const WebcamGestureDetector = ({ onGestureDetected }: WebcamGestureDetectorProps
               setCurrentGesture(gestureName);
               
               // Debounce: only trigger if gesture changed and 2 seconds have passed
-              const now = Date.now();
-              if (gestureName !== lastGestureRef.current && now - lastDetectionTimeRef.current > 2000) {
+              const detectionNow = Date.now();
+              if (gestureName !== lastGestureRef.current && detectionNow - lastDetectionTimeRef.current > 2000) {
                 lastGestureRef.current = gestureName;
-                lastDetectionTimeRef.current = now;
+                lastDetectionTimeRef.current = detectionNow;
                 onGestureDetected(gestureName);
               }
             } else {
               setCurrentGesture("No gesture detected");
             }
+            
+            // Monitor memory every 100 predictions
+            if (Math.random() < 0.01) {
+              monitorMemory(100);
+            }
+            
           } catch (error) {
             console.error("Prediction error:", error);
           }
@@ -94,9 +220,10 @@ const WebcamGestureDetector = ({ onGestureDetected }: WebcamGestureDetectorProps
         };
         
         predict();
-      } catch (error) {
+        
+      } catch (error: any) {
         console.error("Error initializing webcam:", error);
-        setCurrentGesture("Camera access denied or unavailable");
+        setError(error.message || "Failed to initialize camera");
       }
     };
 
@@ -104,14 +231,51 @@ const WebcamGestureDetector = ({ onGestureDetected }: WebcamGestureDetectorProps
 
     return () => {
       isActive = false;
+      
+      // Cancel animation frame
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
-      if (webcam) {
-        webcam.stop();
-      }
+      
+      // Cleanup resources
+      cleanup(
+        modelRef.current,
+        webcamInstanceRef.current,
+        streamRef.current || undefined
+      );
+      
+      // Clear refs
+      modelRef.current = null;
+      webcamInstanceRef.current = null;
+      streamRef.current = null;
     };
   }, [onGestureDetected]);
+
+  // Retry handler
+  const handleRetry = useCallback(() => {
+    setError(null);
+    setIsModelLoaded(false);
+    setLoadingMessage("Retrying...");
+    window.location.reload();
+  }, []);
+
+  // Fallback to keyboard/mouse
+  const handleUseFallback = useCallback(() => {
+    toast.info("Gesture controls disabled. Use keyboard or mouse instead.");
+    setError(null);
+  }, []);
+
+  // Show error handler if there's an error
+  if (error) {
+    return (
+      <CameraErrorHandler 
+        error={error}
+        onRetry={handleRetry}
+        onUseFallback={handleUseFallback}
+        showFallback={true}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col items-center gap-6">
@@ -128,8 +292,15 @@ const WebcamGestureDetector = ({ onGestureDetected }: WebcamGestureDetectorProps
           <div className="absolute inset-0 flex items-center justify-center bg-card/90 rounded-2xl backdrop-blur-sm">
             <div className="text-center">
               <div className="animate-spin rounded-full h-14 w-14 border-b-2 border-accent mx-auto mb-4"></div>
-              <p className="text-foreground text-lg font-medium">Loading camera...</p>
+              <p className="text-foreground text-lg font-medium">{loadingMessage}</p>
             </div>
+          </div>
+        )}
+        
+        {/* Performance indicator */}
+        {isModelLoaded && inferenceTime > 0 && (
+          <div className="absolute top-2 right-2 bg-black/70 backdrop-blur-sm rounded-lg px-3 py-1 text-xs">
+            <span className="text-white">{inferenceTime}ms</span>
           </div>
         )}
       </div>

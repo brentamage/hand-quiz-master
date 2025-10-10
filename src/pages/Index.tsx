@@ -6,6 +6,7 @@ import ProgressBar from "@/components/ProgressBar";
 import GestureGuide from "@/components/GestureGuide";
 import ThemeToggle from "@/components/ThemeToggle";
 import AnimatedBackground from "@/components/AnimatedBackground";
+import PerformanceMonitor from "@/components/PerformanceMonitor";
 import { getQuestionsByDifficulty, DifficultyLevel, Question } from "@/data/quizData";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Trophy, RotateCcw, CheckCircle, XCircle, Play, Sparkles, Target, Zap, Award, Star } from "lucide-react";
@@ -39,6 +40,8 @@ const Index = () => {
   const [levelResults, setLevelResults] = useState<LevelResult[]>([]);
   const [correctStreak, setCorrectStreak] = useState(0);
   const [levelStartTime, setLevelStartTime] = useState<number>(0);
+  const [showPerformanceMonitor, setShowPerformanceMonitor] = useState(false);
+  const [devicePerformance, setDevicePerformance] = useState<'high' | 'medium' | 'low'>('medium');
 
   // Sound effects and achievements
   const soundEffects = useSoundEffects();
@@ -603,6 +606,11 @@ const Index = () => {
       <BackToMenuButton />
       <ThemeToggle />
       <SoundToggle />
+      <PerformanceMonitor 
+        isVisible={showPerformanceMonitor}
+        onToggle={() => setShowPerformanceMonitor(!showPerformanceMonitor)}
+        onPerformanceChange={setDevicePerformance}
+      />
       {notification && (
         <AchievementNotification achievement={notification} onClose={clearNotification} />
       )}
@@ -624,7 +632,10 @@ const Index = () => {
         <div className="grid lg:grid-cols-2 gap-12 items-start">
           {/* Left Column - Webcam & Guide */}
           <div className="space-y-8 flex flex-col items-center fade-in-up delay-200">
-            <WebcamGestureDetector onGestureDetected={handleGestureDetected} />
+            <WebcamGestureDetector 
+              onGestureDetected={handleGestureDetected}
+              onPerformanceDetected={setDevicePerformance}
+            />
             <GestureGuide />
           </div>
 
