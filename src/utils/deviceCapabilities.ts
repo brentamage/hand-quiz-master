@@ -161,24 +161,24 @@ export const getRecommendedSettings = (performance: 'high' | 'medium' | 'low') =
   switch (performance) {
     case 'high':
       return {
-        videoWidth: 160,
-        videoHeight: 160,
-        predictionInterval: 150, // 6-7 FPS - reduced for better performance
-        confidenceThreshold: 0.7
+        videoWidth: 320,
+        videoHeight: 320,
+        predictionInterval: 50, // 20 FPS
+        confidenceThreshold: 0.8
       };
     case 'medium':
       return {
-        videoWidth: 160,
-        videoHeight: 160,
-        predictionInterval: 200, // 5 FPS - reduced for better performance
-        confidenceThreshold: 0.65
+        videoWidth: 224,
+        videoHeight: 224,
+        predictionInterval: 100, // 10 FPS
+        confidenceThreshold: 0.75
       };
     case 'low':
       return {
-        videoWidth: 128,
-        videoHeight: 128,
-        predictionInterval: 300, // 3 FPS - very low for minimal lag
-        confidenceThreshold: 0.6
+        videoWidth: 160,
+        videoHeight: 160,
+        predictionInterval: 200, // 5 FPS
+        confidenceThreshold: 0.7
       };
   }
 };

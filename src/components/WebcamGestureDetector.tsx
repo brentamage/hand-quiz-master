@@ -39,13 +39,11 @@ const WebcamGestureDetector = ({ onGestureDetected, onPerformanceDetected }: Web
   const predictionIntervalRef = useRef<number>(100); // Default 10 FPS
   const lastPredictionTimeRef = useRef<number>(0);
 
-  // Combined initialization - runs only once on mount
+  // Initialize device capabilities and memory monitoring
   useEffect(() => {
-    let isActive = true;
-
-    const initAll = async () => {
+    const init = async () => {
       try {
-        // Step 1: Check device capabilities
+        // Check device capabilities
         setLoadingMessage("Checking device capabilities...");
         const capabilities = await getDeviceCapabilities();
         
@@ -83,15 +81,36 @@ const WebcamGestureDetector = ({ onGestureDetected, onPerformanceDetected }: Web
           }
         });
 
-        // Step 2: Load AI model
+      } catch (err: any) {
+        console.error("Initialization error:", err);
+        setError(err.message || "Failed to initialize");
+      }
+    };
+
+    init();
+
+    return () => {
+      if (memoryMonitorRef.current) {
+        memoryMonitorRef.current.stop();
+      }
+    };
+  }, [onPerformanceDetected]);
+
+  // Main webcam and model initialization
+  useEffect(() => {
+    let isActive = true;
+
+    const initWebcam = async () => {
+      try {
         setLoadingMessage("Loading AI model...");
+        
+        // Load Teachable Machine model
         const modelURL = "https://teachablemachine.withgoogle.com/models/-veScKgsx/model.json";
         const metadataURL = "https://teachablemachine.withgoogle.com/models/-veScKgsx/metadata.json";
         
         modelRef.current = await tmImage.load(modelURL, metadataURL);
         console.log("Model loaded successfully");
         
-        // Step 3: Request camera access
         setLoadingMessage("Requesting camera access...");
         
         // Request camera access with proper error handling
@@ -104,13 +123,11 @@ const WebcamGestureDetector = ({ onGestureDetected, onPerformanceDetected }: Web
 
         streamRef.current = cameraResult.stream!;
         
-        // Step 4: Initialize camera
         setLoadingMessage("Initializing camera...");
         
         // Try Teachable Machine webcam first
-        // Using 160x160 for much better performance and less lag
         try {
-          const webcam = new tmImage.Webcam(160, 160, true);
+          const webcam = new tmImage.Webcam(320, 320, true);
           await webcam.setup({ facingMode: "user" });
           await webcam.play();
           webcamInstanceRef.current = webcam;
@@ -132,7 +149,7 @@ const WebcamGestureDetector = ({ onGestureDetected, onPerformanceDetected }: Web
         setError(null);
         toast.success("Camera initialized successfully!");
         
-        // Step 5: Start prediction loop with throttling
+        // Start prediction loop with throttling
         const predict = async () => {
           if (!isActive || !modelRef.current) return;
           
@@ -172,20 +189,25 @@ const WebcamGestureDetector = ({ onGestureDetected, onPerformanceDetected }: Web
               pred.probability > max.probability ? pred : max
             , predictions[0]);
             
-            // Only update if confidence is above threshold (lowered for better detection)
-            if (maxPrediction.probability > 0.7) {
+            // Only update if confidence is above threshold
+            if (maxPrediction.probability > 0.8) {
               const gestureName = maxPrediction.className;
               setCurrentGesture(gestureName);
               
-              // Debounce: only trigger if gesture changed and 1 second has passed (reduced for faster response)
+              // Debounce: only trigger if gesture changed and 2 seconds have passed
               const detectionNow = Date.now();
-              if (gestureName !== lastGestureRef.current && detectionNow - lastDetectionTimeRef.current > 1000) {
+              if (gestureName !== lastGestureRef.current && detectionNow - lastDetectionTimeRef.current > 2000) {
                 lastGestureRef.current = gestureName;
                 lastDetectionTimeRef.current = detectionNow;
                 onGestureDetected(gestureName);
               }
             } else {
               setCurrentGesture("No gesture detected");
+            }
+            
+            // Monitor memory every 100 predictions
+            if (Math.random() < 0.01) {
+              monitorMemory(100);
             }
             
           } catch (error) {
@@ -200,12 +222,12 @@ const WebcamGestureDetector = ({ onGestureDetected, onPerformanceDetected }: Web
         predict();
         
       } catch (error: any) {
-        console.error("Error initializing:", error);
-        setError(error.message || "Failed to initialize");
+        console.error("Error initializing webcam:", error);
+        setError(error.message || "Failed to initialize camera");
       }
     };
 
-    initAll();
+    initWebcam();
 
     return () => {
       isActive = false;
@@ -213,11 +235,6 @@ const WebcamGestureDetector = ({ onGestureDetected, onPerformanceDetected }: Web
       // Cancel animation frame
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
-      }
-      
-      // Stop memory monitor
-      if (memoryMonitorRef.current) {
-        memoryMonitorRef.current.stop();
       }
       
       // Cleanup resources
@@ -232,7 +249,7 @@ const WebcamGestureDetector = ({ onGestureDetected, onPerformanceDetected }: Web
       webcamInstanceRef.current = null;
       streamRef.current = null;
     };
-  }, []); // Empty dependency array - only run once on mount
+  }, [onGestureDetected]);
 
   // Retry handler
   const handleRetry = useCallback(() => {

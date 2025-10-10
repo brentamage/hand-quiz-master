@@ -145,9 +145,17 @@ const Index = () => {
     setAnswers(newAnswers);
     
     soundEffects.playClick();
-    toast.success(`Option ${String.fromCharCode(65 + index)} selected`, {
-      duration: 1500,
-    });
+    
+    // Check if answer is correct for immediate feedback
+    const isCorrect = index === currentQuestion.correctAnswer;
+    toast.success(isCorrect ? "Correct!" : "Answer selected", { duration: 1000 });
+    
+    // If this is the last question and user just answered it, auto-advance after a short delay
+    if (currentQuestionIndex === questions.length - 1) {
+      setTimeout(() => {
+        handleNext();
+      }, 1500); // 1.5 second delay to show the selection
+    }
   };
 
   const handlePrevious = () => {
@@ -242,11 +250,14 @@ const Index = () => {
     } else if (gestureLower === "d." || gestureLower === "d") {
       handleOptionSelect(3);
     } else if (gestureLower === "next") {
-      handleNext();
+      // Only allow next if not on the last question OR if an answer is selected on last question
+      if (currentQuestionIndex < questions.length - 1 || (currentQuestionIndex === questions.length - 1 && selectedOption !== null)) {
+        handleNext();
+      }
     } else if (gestureLower === "previous") {
       handlePrevious();
     }
-  }, [currentQuestionIndex, gameState, answers, questions]);
+  }, [currentQuestionIndex, gameState, answers, questions, selectedOption]);
 
   const handleRestart = () => {
     setGameState('welcome');
