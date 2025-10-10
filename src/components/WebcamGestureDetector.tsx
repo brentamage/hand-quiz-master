@@ -39,11 +39,13 @@ const WebcamGestureDetector = ({ onGestureDetected, onPerformanceDetected }: Web
   const predictionIntervalRef = useRef<number>(100); // Default 10 FPS
   const lastPredictionTimeRef = useRef<number>(0);
 
-  // Initialize device capabilities and memory monitoring
+  // Combined initialization - runs only once on mount
   useEffect(() => {
-    const init = async () => {
+    let isActive = true;
+
+    const initAll = async () => {
       try {
-        // Check device capabilities
+        // Step 1: Check device capabilities
         setLoadingMessage("Checking device capabilities...");
         const capabilities = await getDeviceCapabilities();
         
@@ -81,36 +83,15 @@ const WebcamGestureDetector = ({ onGestureDetected, onPerformanceDetected }: Web
           }
         });
 
-      } catch (err: any) {
-        console.error("Initialization error:", err);
-        setError(err.message || "Failed to initialize");
-      }
-    };
-
-    init();
-
-    return () => {
-      if (memoryMonitorRef.current) {
-        memoryMonitorRef.current.stop();
-      }
-    };
-  }, [onPerformanceDetected]);
-
-  // Main webcam and model initialization
-  useEffect(() => {
-    let isActive = true;
-
-    const initWebcam = async () => {
-      try {
+        // Step 2: Load AI model
         setLoadingMessage("Loading AI model...");
-        
-        // Load Teachable Machine model
         const modelURL = "https://teachablemachine.withgoogle.com/models/-veScKgsx/model.json";
         const metadataURL = "https://teachablemachine.withgoogle.com/models/-veScKgsx/metadata.json";
         
         modelRef.current = await tmImage.load(modelURL, metadataURL);
         console.log("Model loaded successfully");
         
+        // Step 3: Request camera access
         setLoadingMessage("Requesting camera access...");
         
         // Request camera access with proper error handling
@@ -123,6 +104,7 @@ const WebcamGestureDetector = ({ onGestureDetected, onPerformanceDetected }: Web
 
         streamRef.current = cameraResult.stream!;
         
+        // Step 4: Initialize camera
         setLoadingMessage("Initializing camera...");
         
         // Try Teachable Machine webcam first
@@ -149,7 +131,7 @@ const WebcamGestureDetector = ({ onGestureDetected, onPerformanceDetected }: Web
         setError(null);
         toast.success("Camera initialized successfully!");
         
-        // Start prediction loop with throttling
+        // Step 5: Start prediction loop with throttling
         const predict = async () => {
           if (!isActive || !modelRef.current) return;
           
@@ -222,12 +204,12 @@ const WebcamGestureDetector = ({ onGestureDetected, onPerformanceDetected }: Web
         predict();
         
       } catch (error: any) {
-        console.error("Error initializing webcam:", error);
-        setError(error.message || "Failed to initialize camera");
+        console.error("Error initializing:", error);
+        setError(error.message || "Failed to initialize");
       }
     };
 
-    initWebcam();
+    initAll();
 
     return () => {
       isActive = false;
@@ -235,6 +217,11 @@ const WebcamGestureDetector = ({ onGestureDetected, onPerformanceDetected }: Web
       // Cancel animation frame
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
+      }
+      
+      // Stop memory monitor
+      if (memoryMonitorRef.current) {
+        memoryMonitorRef.current.stop();
       }
       
       // Cleanup resources
@@ -249,7 +236,7 @@ const WebcamGestureDetector = ({ onGestureDetected, onPerformanceDetected }: Web
       webcamInstanceRef.current = null;
       streamRef.current = null;
     };
-  }, [onGestureDetected]);
+  }, []); // Empty dependency array - only run once on mount
 
   // Retry handler
   const handleRetry = useCallback(() => {
