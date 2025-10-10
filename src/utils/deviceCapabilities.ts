@@ -161,23 +161,23 @@ export const getRecommendedSettings = (performance: 'high' | 'medium' | 'low') =
   switch (performance) {
     case 'high':
       return {
-        videoWidth: 320,
-        videoHeight: 320,
-        predictionInterval: 50, // 20 FPS
+        videoWidth: 224,
+        videoHeight: 224,
+        predictionInterval: 100, // 10 FPS (reduced from 20)
         confidenceThreshold: 0.8
       };
     case 'medium':
       return {
         videoWidth: 224,
         videoHeight: 224,
-        predictionInterval: 100, // 10 FPS
+        predictionInterval: 150, // 6-7 FPS (reduced from 10)
         confidenceThreshold: 0.75
       };
     case 'low':
       return {
         videoWidth: 160,
         videoHeight: 160,
-        predictionInterval: 200, // 5 FPS
+        predictionInterval: 250, // 4 FPS (reduced from 5)
         confidenceThreshold: 0.7
       };
   }

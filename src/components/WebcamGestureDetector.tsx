@@ -108,8 +108,9 @@ const WebcamGestureDetector = ({ onGestureDetected, onPerformanceDetected }: Web
         setLoadingMessage("Initializing camera...");
         
         // Try Teachable Machine webcam first
+        // Using 224x224 for better performance (change to 160x160 for even lower quality)
         try {
-          const webcam = new tmImage.Webcam(320, 320, true);
+          const webcam = new tmImage.Webcam(224, 224, true);
           await webcam.setup({ facingMode: "user" });
           await webcam.play();
           webcamInstanceRef.current = webcam;
