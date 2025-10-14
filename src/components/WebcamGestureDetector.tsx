@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import * as tf from "@tensorflow/tfjs";
-import * as tmImage from "@teachablemachine/image";
+import * as tmPose from "@teachablemachine/pose";
 import CameraErrorHandler from "./CameraErrorHandler";
 // import HandSkeletonOverlay from "./HandSkeletonOverlay"; // Disabled due to memory issues
 import CameraCalibrationOverlay from "./CameraCalibrationOverlay";
@@ -37,7 +37,7 @@ const WebcamGestureDetector = ({
   const [inferenceTime, setInferenceTime] = useState<number>(0);
   const [cameraQuality, setCameraQuality] = useState<number>(0);
   
-  const modelRef = useRef<tmImage.CustomMobileNet | null>(null);
+  const modelRef = useRef<tmPose.CustomPoseNet | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const animationFrameRef = useRef<number>();
   const lastGestureRef = useRef<string>("");
@@ -113,14 +113,14 @@ const WebcamGestureDetector = ({
 
     const initWebcam = async () => {
       try {
-        setLoadingMessage("Loading AI model...");
+        setLoadingMessage("Loading AI pose model...");
         
-        // Load Teachable Machine model
-        const modelURL = "https://teachablemachine.withgoogle.com/models/uI0KyValB/model.json";
-        const metadataURL = "https://teachablemachine.withgoogle.com/models/uI0KyValB/metadata.json";
+        // Load Teachable Machine pose model
+        const modelURL = "https://teachablemachine.withgoogle.com/models/MEC2-WJCW/model.json";
+        const metadataURL = "https://teachablemachine.withgoogle.com/models/MEC2-WJCW/metadata.json";
         
-        modelRef.current = await tmImage.load(modelURL, metadataURL);
-        console.log("Model loaded successfully");
+        modelRef.current = await tmPose.load(modelURL, metadataURL);
+        console.log("Pose model loaded successfully");
         
         setLoadingMessage("Requesting camera access...");
         
@@ -190,7 +190,9 @@ const WebcamGestureDetector = ({
               return;
             }
             
-            const predictions = await modelRef.current.predict(webcamRef.current);
+            // Get pose and predictions
+            const { pose, posenetOutput } = await modelRef.current.estimatePose(webcamRef.current);
+            const predictions = await modelRef.current.predict(posenetOutput);
             
             const endTime = performance.now();
             const inferenceMs = Math.round(endTime - startTime);
@@ -360,7 +362,7 @@ const WebcamGestureDetector = ({
       </div>
       
       <div className="holographic-card animated-gradient-border rounded-xl px-8 py-5 shadow-depth transition-elegant hover:scale-105">
-        <p className="text-sm text-muted-foreground mb-2 uppercase tracking-wider">Current Gesture</p>
+        <p className="text-sm text-muted-foreground mb-2 uppercase tracking-wider">Current Pose</p>
         <p className="text-2xl font-bold text-accent animate-pulse-glow">{currentGesture}</p>
         
         {/* Camera Quality Indicator */}

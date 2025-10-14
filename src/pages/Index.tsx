@@ -427,7 +427,7 @@ const Index = () => {
               transition={{ delay: 0.7 }}
               className="text-foreground text-2xl max-w-2xl mx-auto mb-12 leading-relaxed drop-shadow-lg font-medium"
             >
-              Test your knowledge using hand gestures. No mouse needed - just your hands!
+              Test your knowledge using body poses. No mouse needed - just strike a pose!
             </motion.p>
             
             <motion.div
@@ -868,7 +868,7 @@ const Index = () => {
         {/* Footer Hint */}
         <div className="text-center mt-16 text-base text-muted-foreground fade-in-up delay-600">
           <p className="max-w-xl mx-auto">
-            Use hand gestures to select your answer, then proceed to the next question
+            Use body poses to select your answer, then proceed to the next question
           </p>
         </div>
       </div>
