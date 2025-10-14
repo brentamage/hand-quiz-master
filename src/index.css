@@ -132,6 +132,206 @@ All colors MUST be HSL.
                       0 4px 16px hsl(222 47% 11% / 0.1),
                       0 1px 4px hsl(222 47% 11% / 0.05);
   }
+
+  /* 🌸 Sakura Theme - Pink Cherry Blossom */
+  .sakura {
+    --background: 350 100% 97%;
+    --foreground: 340 50% 20%;
+    --card: 350 100% 99%;
+    --card-foreground: 340 50% 20%;
+    --primary: 340 82% 52%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 350 60% 90%;
+    --secondary-foreground: 340 50% 20%;
+    --muted: 350 40% 92%;
+    --muted-foreground: 340 30% 45%;
+    --accent: 330 81% 60%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --border: 350 30% 85%;
+    --input: 350 30% 85%;
+    --ring: 340 82% 52%;
+    --gradient-bg: linear-gradient(135deg, hsl(350 100% 97%) 0%, hsl(340 100% 95%) 50%, hsl(350 100% 97%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(330 81% 60%) 0%, hsl(340 82% 52%) 100%);
+  }
+
+  /* 🌊 Ocean Theme - Blue Teal Gradient */
+  .ocean {
+    --background: 195 100% 8%;
+    --foreground: 180 100% 95%;
+    --card: 195 90% 12%;
+    --card-foreground: 180 100% 95%;
+    --primary: 188 94% 37%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 195 70% 18%;
+    --secondary-foreground: 180 100% 95%;
+    --muted: 195 50% 20%;
+    --muted-foreground: 180 20% 65%;
+    --accent: 186 94% 45%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --border: 195 50% 20%;
+    --input: 195 50% 20%;
+    --ring: 188 94% 37%;
+    --gradient-bg: linear-gradient(135deg, hsl(195 100% 8%) 0%, hsl(195 90% 12%) 50%, hsl(195 100% 8%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(186 94% 45%) 0%, hsl(188 94% 37%) 100%);
+  }
+
+  /* 🔥 Fire Theme - Orange Red */
+  .fire {
+    --background: 10 30% 10%;
+    --foreground: 30 100% 95%;
+    --card: 15 40% 15%;
+    --card-foreground: 30 100% 95%;
+    --primary: 16 100% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 20 50% 20%;
+    --secondary-foreground: 30 100% 95%;
+    --muted: 15 30% 25%;
+    --muted-foreground: 30 20% 65%;
+    --accent: 24 100% 50%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --border: 15 30% 25%;
+    --input: 15 30% 25%;
+    --ring: 16 100% 50%;
+    --gradient-bg: linear-gradient(135deg, hsl(10 30% 10%) 0%, hsl(15 40% 15%) 50%, hsl(10 30% 10%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(24 100% 50%) 0%, hsl(16 100% 50%) 100%);
+  }
+
+  /* 🌲 Forest Theme - Green Nature */
+  .forest {
+    --background: 140 30% 10%;
+    --foreground: 120 100% 95%;
+    --card: 140 40% 15%;
+    --card-foreground: 120 100% 95%;
+    --primary: 142 71% 45%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 140 50% 20%;
+    --secondary-foreground: 120 100% 95%;
+    --muted: 140 30% 25%;
+    --muted-foreground: 120 20% 65%;
+    --accent: 134 61% 51%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --border: 140 30% 25%;
+    --input: 140 30% 25%;
+    --ring: 142 71% 45%;
+    --gradient-bg: linear-gradient(135deg, hsl(140 30% 10%) 0%, hsl(140 40% 15%) 50%, hsl(140 30% 10%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(134 61% 51%) 0%, hsl(142 71% 45%) 100%);
+  }
+
+  /* 🌙 Midnight Theme - Deep Purple Blue */
+  .midnight {
+    --background: 240 50% 8%;
+    --foreground: 240 100% 95%;
+    --card: 240 45% 12%;
+    --card-foreground: 240 100% 95%;
+    --primary: 274 100% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 40% 18%;
+    --secondary-foreground: 240 100% 95%;
+    --muted: 240 30% 20%;
+    --muted-foreground: 240 20% 65%;
+    --accent: 280 100% 60%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --border: 240 30% 20%;
+    --input: 240 30% 20%;
+    --ring: 274 100% 50%;
+    --gradient-bg: linear-gradient(135deg, hsl(240 50% 8%) 0%, hsl(240 45% 12%) 50%, hsl(240 50% 8%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(280 100% 60%) 0%, hsl(274 100% 50%) 100%);
+  }
+
+  /* ☀️ Sunset Theme - Orange Pink Gradient */
+  .sunset {
+    --background: 15 100% 96%;
+    --foreground: 10 50% 20%;
+    --card: 20 100% 98%;
+    --card-foreground: 10 50% 20%;
+    --primary: 14 91% 56%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 30 60% 90%;
+    --secondary-foreground: 10 50% 20%;
+    --muted: 30 40% 92%;
+    --muted-foreground: 10 30% 45%;
+    --accent: 330 81% 60%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --border: 30 30% 85%;
+    --input: 30 30% 85%;
+    --ring: 14 91% 56%;
+    --gradient-bg: linear-gradient(135deg, hsl(15 100% 96%) 0%, hsl(340 100% 95%) 50%, hsl(30 100% 96%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(14 91% 56%) 0%, hsl(330 81% 60%) 100%);
+  }
+
+  /* 🎮 Neon Theme - Cyberpunk Style */
+  .neon {
+    --background: 280 30% 8%;
+    --foreground: 180 100% 95%;
+    --card: 280 35% 12%;
+    --card-foreground: 180 100% 95%;
+    --primary: 300 100% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 280 40% 18%;
+    --secondary-foreground: 180 100% 95%;
+    --muted: 280 30% 20%;
+    --muted-foreground: 180 20% 65%;
+    --accent: 180 100% 50%;
+    --accent-foreground: 0 0% 0%;
+    --destructive: 0 100% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 120 100% 50%;
+    --success-foreground: 0 0% 0%;
+    --border: 280 30% 20%;
+    --input: 280 30% 20%;
+    --ring: 300 100% 50%;
+    --gradient-bg: linear-gradient(135deg, hsl(280 30% 8%) 0%, hsl(280 35% 12%) 50%, hsl(280 30% 8%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(300 100% 50%) 0%, hsl(180 100% 50%) 100%);
+  }
+
+  /* 📚 Classic Theme - Book Academic */
+  .classic {
+    --background: 30 20% 94%;
+    --foreground: 30 30% 15%;
+    --card: 30 25% 98%;
+    --card-foreground: 30 30% 15%;
+    --primary: 25 75% 47%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 30 20% 88%;
+    --secondary-foreground: 30 30% 15%;
+    --muted: 30 15% 90%;
+    --muted-foreground: 30 20% 40%;
+    --accent: 35 77% 49%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --border: 30 20% 82%;
+    --input: 30 20% 82%;
+    --ring: 25 75% 47%;
+    --gradient-bg: linear-gradient(135deg, hsl(30 20% 94%) 0%, hsl(30 25% 96%) 50%, hsl(30 20% 94%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(35 77% 49%) 0%, hsl(25 75% 47%) 100%);
+  }
 }
 
 @layer base {

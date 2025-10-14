@@ -18,19 +18,40 @@ const HandSkeletonOverlay = ({ videoElement, enabled = true }: HandSkeletonOverl
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Initialize MediaPipe Hands
-    const hands = new Hands({
-      locateFile: (file) => {
-        return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
-      }
-    });
+    let hands: Hands | null = null;
 
-    hands.setOptions({
-      maxNumHands: 1,
-      modelComplexity: 1,
-      minDetectionConfidence: 0.7,
-      minTrackingConfidence: 0.7
-    });
+    // Initialize MediaPipe Hands with error handling and multiple CDN fallbacks
+    try {
+      const cdnOptions = [
+        'https://cdn.jsdelivr.net/npm/@mediapipe/hands',
+        'https://unpkg.com/@mediapipe/hands',
+        'https://cdn.skypack.dev/@mediapipe/hands'
+      ];
+      
+      const cdnIndex = 0;
+      
+      hands = new Hands({
+        locateFile: (file) => {
+          const cdn = cdnOptions[cdnIndex] || cdnOptions[0];
+          return `${cdn}/${file}`;
+        }
+      });
+
+      if (!hands) {
+        console.warn('MediaPipe Hands not available, skipping visualization');
+        return;
+      }
+
+      hands.setOptions({
+        maxNumHands: 1,
+        modelComplexity: 0, // Use lighter model for better performance
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5
+      });
+    } catch (error) {
+      console.warn('Hand visualization disabled:', error);
+      return;
+    }
 
     hands.onResults((results: Results) => {
       if (!ctx || !canvas) return;

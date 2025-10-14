@@ -1,25 +1,29 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import WebcamGestureDetector from "@/components/WebcamGestureDetector";
 import QuizQuestion from "@/components/QuizQuestion";
-import ProgressBar from "@/components/ProgressBar";
-import GestureGuide from "@/components/GestureGuide";
 import ThemeToggle from "@/components/ThemeToggle";
-import AnimatedBackground from "@/components/AnimatedBackground";
-import PerformanceMonitor from "@/components/PerformanceMonitor";
-import CinematicIntro from "@/components/CinematicIntro";
-import TiltCard from "@/components/TiltCard";
+import ThemeSelector from "@/components/ThemeSelector";
+import GestureGuide from "@/components/GestureGuide";
+
+// Lazy load heavy components
+const AnimatedBackground = lazy(() => import("@/components/AnimatedBackground"));
+const PerformanceMonitor = lazy(() => import("@/components/PerformanceMonitor"));
+const CinematicIntro = lazy(() => import("@/components/CinematicIntro"));
+const QuizLoadingScreen = lazy(() => import("@/components/QuizLoadingScreen"));
+const TiltCard = lazy(() => import("@/components/TiltCard"));
 import { getQuestionsByDifficulty, DifficultyLevel, Question } from "@/data/quizData";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Trophy, RotateCcw, CheckCircle, XCircle, Play, Sparkles, Target, Zap, Award, Star } from "lucide-react";
 import { toast } from "sonner";
-import confetti from "canvas-confetti";
 import { useSoundEffects, SoundToggle } from "@/components/SoundEffects";
 import AchievementNotification, { useAchievements } from "@/components/AchievementSystem";
 import BackToMenuButton from "@/components/BackToMenuButton";
+import { loadProfile, updateStatsAfterQuiz, addXP, checkBadges } from "@/utils/profileManager";
+import { UserProfile } from "@/types/profile";
 
-type GameState = 'welcome' | 'difficulty-select' | 'playing' | 'level-complete' | 'final-results';
+type GameState = 'welcome' | 'difficulty-select' | 'loading' | 'playing' | 'level-complete' | 'final-results';
 
 const PASSING_SCORE = 70; // 70% to pass overall
 const DIFFICULTY_ORDER: DifficultyLevel[] = ['easy', 'medium', 'hard'];
@@ -47,13 +51,25 @@ const Index = () => {
   const [showPerformanceMonitor, setShowPerformanceMonitor] = useState(false);
   const [devicePerformance, setDevicePerformance] = useState<'high' | 'medium' | 'low'>('medium');
   const [showFeedback, setShowFeedback] = useState(false);
+  const [loadingDifficulty, setLoadingDifficulty] = useState<DifficultyLevel>('easy');
+  const webcamContainerRef = useRef<HTMLDivElement>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
   // Sound effects and achievements
   const soundEffects = useSoundEffects();
   const { achievements, notification, checkAchievements, clearNotification } = useAchievements();
 
+  // Load profile on mount
+  useEffect(() => {
+    const profile = loadProfile();
+    setUserProfile(profile);
+  }, []);
+
   const currentDifficulty = DIFFICULTY_ORDER[currentDifficultyIndex];
   const currentQuestion = questions[currentQuestionIndex];
+  
+  // Determine if webcam should be shown (only during playing, not on results screens)
+  const showWebcam = gameState === 'playing';
 
   // Reset selected option and feedback when question changes
   useEffect(() => {
@@ -63,7 +79,7 @@ const Index = () => {
     }
   }, [currentQuestionIndex, gameState, answers]);
 
-  // Trigger confetti when final results show and user passed
+  // Redirect to leaderboard after completing all quizzes
   useEffect(() => {
     if (gameState === 'final-results') {
       const totalScore = getTotalScore();
@@ -71,49 +87,30 @@ const Index = () => {
       const percentage = totalQuestions > 0 ? Math.round((totalScore / totalQuestions) * 100) : 0;
       const passed = percentage >= PASSING_SCORE;
 
-      if (passed) {
-        // Fire confetti multiple times for celebration
-        const duration = 3000;
-        const end = Date.now() + duration;
-        const colors = ['#c084fc', '#a855f7', '#9333ea', '#7c3aed', '#6366f1'];
+      // Check if all three difficulty levels were completed
+      const completedAllLevels = levelResults.length === 3;
 
-        (function frame() {
-          confetti({
-            particleCount: 3,
-            angle: 60,
-            spread: 55,
-            origin: { x: 0 },
-            colors: colors
-          });
-          confetti({
-            particleCount: 3,
-            angle: 120,
-            spread: 55,
-            origin: { x: 1 },
-            colors: colors
-          });
-
-          if (Date.now() < end) {
-            requestAnimationFrame(frame);
-          }
-        }());
-
-        // Big burst in the center
-        setTimeout(() => {
-          confetti({
-            particleCount: 100,
-            spread: 70,
-            origin: { y: 0.6 },
-            colors: colors
-          });
-        }, 200);
-      }
+      // Redirect to leaderboard after a short delay
+      setTimeout(() => {
+        navigate('/leaderboard', { 
+          state: { 
+            passed, 
+            showConfetti: completedAllLevels && passed // Only show confetti if passed AND completed all levels
+          } 
+        });
+      }, 2000); // 2 second delay to show results briefly
     }
-  }, [gameState, levelResults]);
+  }, [gameState, levelResults, navigate]);
 
   const startQuiz = (selectedDifficulty: DifficultyLevel) => {
-    const difficultyIndex = DIFFICULTY_ORDER.indexOf(selectedDifficulty);
-    const quizQuestions = getQuestionsByDifficulty(selectedDifficulty);
+    setLoadingDifficulty(selectedDifficulty);
+    setGameState('loading');
+    soundEffects.playWhoosh();
+  };
+
+  const onLoadingComplete = () => {
+    const difficultyIndex = DIFFICULTY_ORDER.indexOf(loadingDifficulty);
+    const quizQuestions = getQuestionsByDifficulty(loadingDifficulty);
     setCurrentDifficultyIndex(difficultyIndex);
     setQuestions(quizQuestions);
     setAnswers(new Array(quizQuestions.length).fill(null));
@@ -123,13 +120,20 @@ const Index = () => {
     setCorrectStreak(0);
     setLevelStartTime(Date.now());
     setGameState('playing');
-    soundEffects.playWhoosh();
+    soundEffects.playLoadingComplete();
   };
 
   const startNextLevel = () => {
     const nextIndex = currentDifficultyIndex + 1;
     const nextDifficulty = DIFFICULTY_ORDER[nextIndex];
-    const quizQuestions = getQuestionsByDifficulty(nextDifficulty);
+    setLoadingDifficulty(nextDifficulty);
+    setGameState('loading');
+    soundEffects.playWhoosh();
+  };
+
+  const onNextLevelLoadingComplete = () => {
+    const nextIndex = DIFFICULTY_ORDER.indexOf(loadingDifficulty);
+    const quizQuestions = getQuestionsByDifficulty(loadingDifficulty);
     
     setCurrentDifficultyIndex(nextIndex);
     setQuestions(quizQuestions);
@@ -139,7 +143,7 @@ const Index = () => {
     setCorrectStreak(0);
     setLevelStartTime(Date.now());
     setGameState('playing');
-    soundEffects.playWhoosh();
+    soundEffects.playPowerUp();
   };
 
   const handleOptionSelect = (index: number) => {
@@ -188,7 +192,14 @@ const Index = () => {
     if (currentQuestionIndex < questions.length - 1) {
       // Check if current answer is correct for streak tracking
       if (currentQuestion && selectedOption !== null && selectedOption === currentQuestion.correctAnswer) {
-        setCorrectStreak(prev => prev + 1);
+        setCorrectStreak(prev => {
+          const newStreak = prev + 1;
+          // Play streak sound on milestones
+          if (newStreak === 3 || newStreak === 5 || newStreak % 10 === 0) {
+            soundEffects.playStreak();
+          }
+          return newStreak;
+        });
       } else if (selectedOption !== null) {
         setCorrectStreak(0);
       }
@@ -196,7 +207,7 @@ const Index = () => {
       setShowFeedback(false);
       setCurrentQuestionIndex(prev => prev + 1);
       setSelectedOption(answers[currentQuestionIndex + 1]);
-      soundEffects.playWhoosh();
+      soundEffects.playQuestionChange();
     } else {
       // Level completed
       const score = calculateScore(answers, questions);
@@ -205,11 +216,11 @@ const Index = () => {
       
       // Play sound based on performance
       if (percentage === 100) {
-        soundEffects.playLevelComplete();
+        soundEffects.playPerfect();
       } else if (percentage >= 70) {
-        soundEffects.playSuccess();
+        soundEffects.playLevelComplete();
       } else {
-        soundEffects.playError();
+        soundEffects.playFail();
       }
       
       const levelResult: LevelResult = {
@@ -246,25 +257,43 @@ const Index = () => {
   };
 
   const handleGestureDetected = useCallback((gesture: string) => {
-    if (gameState !== 'playing') return;
+    // Allow gestures in playing, level-complete, and final-results states (not during loading)
+    if (gameState === 'welcome' || gameState === 'difficulty-select' || gameState === 'loading') return;
     
     const gestureLower = gesture.toLowerCase().trim();
     
-    if (gestureLower === "a." || gestureLower === "a") {
-      handleOptionSelect(0);
-    } else if (gestureLower === "b." || gestureLower === "b") {
-      handleOptionSelect(1);
-    } else if (gestureLower === "c." || gestureLower === "c") {
-      handleOptionSelect(2);
-    } else if (gestureLower === "d." || gestureLower === "d") {
-      handleOptionSelect(3);
-    } else if (gestureLower === "next") {
-      // Only allow next if not on the last question OR if an answer is selected on last question
-      if (currentQuestionIndex < questions.length - 1 || (currentQuestionIndex === questions.length - 1 && selectedOption !== null)) {
-        handleNext();
+    // Only process answer selection gestures during 'playing' state
+    if (gameState === 'playing') {
+      if (gestureLower === "a." || gestureLower === "a") {
+        handleOptionSelect(0);
+      } else if (gestureLower === "b." || gestureLower === "b") {
+        handleOptionSelect(1);
+      } else if (gestureLower === "c." || gestureLower === "c") {
+        handleOptionSelect(2);
+      } else if (gestureLower === "d." || gestureLower === "d") {
+        handleOptionSelect(3);
+      } else if (gestureLower === "next") {
+        // Only allow next if not on the last question OR if an answer is selected on last question
+        if (currentQuestionIndex < questions.length - 1 || (currentQuestionIndex === questions.length - 1 && selectedOption !== null)) {
+          handleNext();
+        }
+      } else if (gestureLower === "previous") {
+        handlePrevious();
       }
-    } else if (gestureLower === "previous") {
-      handlePrevious();
+    }
+    
+    // Allow navigation gestures in level-complete state
+    if (gameState === 'level-complete') {
+      if (gestureLower === "next") {
+        startNextLevel();
+      }
+    }
+    
+    // Allow restart gesture in final-results state
+    if (gameState === 'final-results') {
+      if (gestureLower === "next") {
+        handleRestart();
+      }
     }
   }, [currentQuestionIndex, gameState, answers, questions, selectedOption]);
 
@@ -295,9 +324,23 @@ const Index = () => {
     return total > 0 ? Math.round((getTotalScore() / total) * 100) : 0;
   };
 
+  // Loading fallback component
+  const LoadingFallback = () => (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-accent mx-auto mb-4"></div>
+        <p className="text-foreground text-lg">Loading...</p>
+      </div>
+    </div>
+  );
+
   // Cinematic Intro
   if (showIntro) {
-    return <CinematicIntro onComplete={() => setShowIntro(false)} />;
+    return (
+      <Suspense fallback={<LoadingFallback />}>
+        <CinematicIntro onComplete={() => setShowIntro(false)} />
+      </Suspense>
+    );
   }
 
   // Welcome Screen
@@ -309,11 +352,45 @@ const Index = () => {
         className="min-h-screen flex items-center justify-center py-12 px-4 relative overflow-hidden"
       >
         {/* Animated Background */}
-        <AnimatedBackground />
+        <Suspense fallback={null}>
+          <AnimatedBackground />
+        </Suspense>
         
         {/* Content */}
         <ThemeToggle />
         <SoundToggle />
+        <ThemeSelector />
+        
+        {/* Compact Profile - Top Left */}
+        {userProfile && (
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3 }}
+            className="fixed top-6 left-6 z-50"
+            onClick={() => navigate('/profile')}
+          >
+            <div className="flex items-center gap-2 p-2 bg-card/80 backdrop-blur-md rounded-xl border border-accent/30 hover:border-accent/60 transition-all cursor-pointer hover:bg-card/90 group shadow-elegant">
+              <div className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-accent/30 group-hover:ring-accent/60 transition-all">
+                <div 
+                  className="w-full h-full"
+                  style={{
+                    background: `linear-gradient(135deg, ${userProfile.avatar.primaryColor}, ${userProfile.avatar.secondaryColor})`
+                  }}
+                />
+              </div>
+              <div className="pr-2">
+                <p className="text-xs font-semibold group-hover:text-accent transition-colors leading-tight">
+                  {userProfile.displayName}
+                </p>
+                <p className="text-[10px] text-muted-foreground leading-tight">
+                  Lv.{userProfile.level} • {userProfile.badges.length} 🏆
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+        
         {notification && (
           <AchievementNotification achievement={notification} onClose={clearNotification} />
         )}
@@ -470,6 +547,18 @@ const Index = () => {
     );
   }
 
+  // Loading Screen
+  if (gameState === 'loading') {
+    return (
+      <Suspense fallback={<LoadingFallback />}>
+        <QuizLoadingScreen 
+          difficulty={loadingDifficulty}
+          onComplete={levelResults.length > 0 ? onNextLevelLoadingComplete : onLoadingComplete}
+        />
+      </Suspense>
+    );
+  }
+
   // Level Complete Screen
   if (gameState === 'level-complete') {
     const lastResult = levelResults[levelResults.length - 1];
@@ -487,11 +576,12 @@ const Index = () => {
           <div className="grid lg:grid-cols-2 gap-12 items-start">
             {/* Left Column - Webcam (stays active) */}
             <div className="space-y-8 flex flex-col items-center fade-in-up">
-              <WebcamGestureDetector 
-                key="webcam-stable"
-                onGestureDetected={handleGestureDetected}
-                onPerformanceDetected={handlePerformanceDetected}
-              />
+              {showWebcam && (
+                <WebcamGestureDetector 
+                  onGestureDetected={handleGestureDetected}
+                  onPerformanceDetected={handlePerformanceDetected}
+                />
+              )}
               <GestureGuide />
             </div>
 
@@ -547,11 +637,12 @@ const Index = () => {
         <div className="container mx-auto max-w-7xl">
           {/* Webcam stays active at top */}
           <div className="flex justify-center mb-8 fade-in-up">
-            <WebcamGestureDetector 
-              key="webcam-stable"
-              onGestureDetected={handleGestureDetected}
-              onPerformanceDetected={handlePerformanceDetected}
-            />
+            {showWebcam && (
+              <WebcamGestureDetector 
+                onGestureDetected={handleGestureDetected}
+                onPerformanceDetected={handlePerformanceDetected}
+              />
+            )}
           </div>
 
           <div className="max-w-5xl mx-auto">
@@ -694,11 +785,13 @@ const Index = () => {
       <BackToMenuButton onRestart={handleRestart} />
       <ThemeToggle />
       <SoundToggle />
-      <PerformanceMonitor 
-        isVisible={showPerformanceMonitor}
-        onToggle={() => setShowPerformanceMonitor(!showPerformanceMonitor)}
-        onPerformanceChange={setDevicePerformance}
-      />
+      <Suspense fallback={null}>
+        <PerformanceMonitor 
+          isVisible={showPerformanceMonitor}
+          onToggle={() => setShowPerformanceMonitor(!showPerformanceMonitor)}
+          onPerformanceChange={setDevicePerformance}
+        />
+      </Suspense>
       {notification && (
         <AchievementNotification achievement={notification} onClose={clearNotification} />
       )}
@@ -720,11 +813,12 @@ const Index = () => {
         <div className="grid lg:grid-cols-2 gap-12 items-start">
           {/* Left Column - Webcam & Guide */}
           <div className="space-y-8 flex flex-col items-center fade-in-up delay-200">
-            <WebcamGestureDetector 
-              key="webcam-stable"
-              onGestureDetected={handleGestureDetected}
-              onPerformanceDetected={handlePerformanceDetected}
-            />
+            {showWebcam && (
+              <WebcamGestureDetector 
+                onGestureDetected={handleGestureDetected}
+                onPerformanceDetected={handlePerformanceDetected}
+              />
+            )}
             <GestureGuide />
           </div>
 

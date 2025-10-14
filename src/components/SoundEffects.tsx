@@ -9,7 +9,8 @@ class SoundGenerator {
   private enabled: boolean = true;
 
   constructor() {
-    this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    this.audioContext = new AudioContextClass();
     this.masterGain = this.audioContext.createGain();
     this.masterGain.connect(this.audioContext.destination);
     this.masterGain.gain.value = 0.3; // Default volume
@@ -134,6 +135,79 @@ class SoundGenerator {
     oscillator.start(this.audioContext.currentTime);
     oscillator.stop(this.audioContext.currentTime + 0.3);
   }
+
+  // Camera ready sound
+  playCameraReady() {
+    if (!this.enabled) return;
+    const notes = [440, 554.37]; // A4, C#5
+    notes.forEach((freq, i) => {
+      setTimeout(() => this.playTone(freq, 0.1, 'sine', 0.4), i * 60);
+    });
+  }
+
+  // Question change sound - soft transition
+  playQuestionChange() {
+    if (!this.enabled) return;
+    this.playTone(523.25, 0.15, 'sine', 0.3);
+  }
+
+  // Streak milestone sound
+  playStreak() {
+    if (!this.enabled) return;
+    const notes = [659.25, 783.99, 987.77]; // E5, G5, B5
+    notes.forEach((freq, i) => {
+      setTimeout(() => this.playTone(freq, 0.12, 'sine', 0.5), i * 70);
+    });
+  }
+
+  // Power up sound
+  playPowerUp() {
+    if (!this.enabled) return;
+    const notes = [261.63, 329.63, 392.00, 523.25]; // C4, E4, G4, C5
+    notes.forEach((freq, i) => {
+      setTimeout(() => this.playTone(freq, 0.1, 'triangle', 0.4), i * 50);
+    });
+  }
+
+  // Fail sound - sad trombone effect
+  playFail() {
+    if (!this.enabled) return;
+    const notes = [392.00, 349.23, 329.63, 293.66]; // G4, F4, E4, D4
+    notes.forEach((freq, i) => {
+      setTimeout(() => this.playTone(freq, 0.2, 'sawtooth', 0.3), i * 150);
+    });
+  }
+
+  // Perfect score celebration
+  playPerfect() {
+    if (!this.enabled) return;
+    const melody = [
+      { freq: 523.25, time: 0 },     // C5
+      { freq: 659.25, time: 100 },   // E5
+      { freq: 783.99, time: 200 },   // G5
+      { freq: 1046.50, time: 300 },  // C6
+      { freq: 783.99, time: 450 },   // G5
+      { freq: 1046.50, time: 550 }   // C6
+    ];
+    melody.forEach(note => {
+      setTimeout(() => this.playTone(note.freq, 0.15, 'sine', 0.6), note.time);
+    });
+  }
+
+  // Button press sound - satisfying click
+  playButtonPress() {
+    if (!this.enabled) return;
+    this.playTone(1200, 0.04, 'square', 0.25);
+  }
+
+  // Loading complete sound
+  playLoadingComplete() {
+    if (!this.enabled) return;
+    const notes = [783.99, 1046.50]; // G5, C6
+    notes.forEach((freq, i) => {
+      setTimeout(() => this.playTone(freq, 0.12, 'sine', 0.4), i * 80);
+    });
+  }
 }
 
 let soundGeneratorInstance: SoundGenerator | null = null;
@@ -178,7 +252,15 @@ export const useSoundEffects = () => {
     playGestureDetected: () => soundRef.current?.playGestureDetected(),
     playTick: () => soundRef.current?.playTick(),
     playUrgentTick: () => soundRef.current?.playUrgentTick(),
-    playWhoosh: () => soundRef.current?.playWhoosh()
+    playWhoosh: () => soundRef.current?.playWhoosh(),
+    playCameraReady: () => soundRef.current?.playCameraReady(),
+    playQuestionChange: () => soundRef.current?.playQuestionChange(),
+    playStreak: () => soundRef.current?.playStreak(),
+    playPowerUp: () => soundRef.current?.playPowerUp(),
+    playFail: () => soundRef.current?.playFail(),
+    playPerfect: () => soundRef.current?.playPerfect(),
+    playButtonPress: () => soundRef.current?.playButtonPress(),
+    playLoadingComplete: () => soundRef.current?.playLoadingComplete()
   };
 };
 
