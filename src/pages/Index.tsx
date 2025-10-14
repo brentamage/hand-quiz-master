@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import WebcamGestureDetector from "@/components/WebcamGestureDetector";
 import QuizQuestion from "@/components/QuizQuestion";
 import ProgressBar from "@/components/ProgressBar";
@@ -7,6 +8,8 @@ import GestureGuide from "@/components/GestureGuide";
 import ThemeToggle from "@/components/ThemeToggle";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import PerformanceMonitor from "@/components/PerformanceMonitor";
+import CinematicIntro from "@/components/CinematicIntro";
+import TiltCard from "@/components/TiltCard";
 import { getQuestionsByDifficulty, DifficultyLevel, Question } from "@/data/quizData";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Trophy, RotateCcw, CheckCircle, XCircle, Play, Sparkles, Target, Zap, Award, Star } from "lucide-react";
@@ -31,6 +34,7 @@ interface LevelResult {
 
 const Index = () => {
   const navigate = useNavigate();
+  const [showIntro, setShowIntro] = useState(true);
   const [gameState, setGameState] = useState<GameState>('welcome');
   const [currentDifficultyIndex, setCurrentDifficultyIndex] = useState(0);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -42,6 +46,7 @@ const Index = () => {
   const [levelStartTime, setLevelStartTime] = useState<number>(0);
   const [showPerformanceMonitor, setShowPerformanceMonitor] = useState(false);
   const [devicePerformance, setDevicePerformance] = useState<'high' | 'medium' | 'low'>('medium');
+  const [showFeedback, setShowFeedback] = useState(false);
 
   // Sound effects and achievements
   const soundEffects = useSoundEffects();
@@ -50,10 +55,11 @@ const Index = () => {
   const currentDifficulty = DIFFICULTY_ORDER[currentDifficultyIndex];
   const currentQuestion = questions[currentQuestionIndex];
 
-  // Reset selected option when question changes
+  // Reset selected option and feedback when question changes
   useEffect(() => {
     if (gameState === 'playing' && questions.length > 0) {
       setSelectedOption(answers[currentQuestionIndex]);
+      setShowFeedback(false);
     }
   }, [currentQuestionIndex, gameState, answers]);
 
@@ -118,7 +124,6 @@ const Index = () => {
     setLevelStartTime(Date.now());
     setGameState('playing');
     soundEffects.playWhoosh();
-    toast.success(`${selectedDifficulty.toUpperCase()} level started!`, { duration: 2000 });
   };
 
   const startNextLevel = () => {
@@ -135,10 +140,11 @@ const Index = () => {
     setLevelStartTime(Date.now());
     setGameState('playing');
     soundEffects.playWhoosh();
-    toast.success(`${nextDifficulty.toUpperCase()} level started!`, { duration: 2000 });
   };
 
   const handleOptionSelect = (index: number) => {
+    if (showFeedback) return; // Prevent changing answer during feedback
+    
     setSelectedOption(index);
     const newAnswers = [...answers];
     newAnswers[currentQuestionIndex] = index;
@@ -146,23 +152,29 @@ const Index = () => {
     
     soundEffects.playClick();
     
-    // Check if answer is correct for immediate feedback
-    const isCorrect = index === currentQuestion.correctAnswer;
-    toast.success(isCorrect ? "Correct!" : "Answer selected", { duration: 1000 });
-    
-    // If this is the last question and user just answered it, auto-advance after a short delay
-    if (currentQuestionIndex === questions.length - 1) {
-      setTimeout(() => {
-        handleNext();
-      }, 1500); // 1.5 second delay to show the selection
-    }
+    // Show purple highlight first, then feedback after 1 second
+    setTimeout(() => {
+      setShowFeedback(true);
+      
+      // If this is the last question, auto-advance after showing feedback
+      if (currentQuestionIndex === questions.length - 1) {
+        setTimeout(() => {
+          handleNext();
+        }, 2000); // 2 seconds to see feedback
+      } else {
+        // Clear feedback after 2 seconds for other questions
+        setTimeout(() => {
+          setShowFeedback(false);
+        }, 2000);
+      }
+    }, 1000); // 1 second to show purple highlight
   };
 
   const handlePrevious = () => {
     if (currentQuestionIndex > 0) {
+      setShowFeedback(false);
       setCurrentQuestionIndex(prev => prev - 1);
       setSelectedOption(answers[currentQuestionIndex - 1]);
-      toast.info("Previous question", { duration: 1000 });
     }
   };
 
@@ -181,10 +193,10 @@ const Index = () => {
         setCorrectStreak(0);
       }
       
+      setShowFeedback(false);
       setCurrentQuestionIndex(prev => prev + 1);
       setSelectedOption(answers[currentQuestionIndex + 1]);
       soundEffects.playWhoosh();
-      toast.info("Next question", { duration: 1000 });
     } else {
       // Level completed
       const score = calculateScore(answers, questions);
@@ -226,12 +238,9 @@ const Index = () => {
       if (isLastLevel) {
         // Completed the last level - show final results
         setGameState('final-results');
-        const message = newLevelResults.length >= 3 ? 'All levels completed!' : 'Quiz completed!';
-        toast.success(message, { duration: 3000 });
       } else {
         // More levels to go - show level complete screen
         setGameState('level-complete');
-        toast.success(`${currentDifficulty.toUpperCase()} level completed!`, { duration: 2000 });
       }
     }
   };
@@ -259,6 +268,10 @@ const Index = () => {
     }
   }, [currentQuestionIndex, gameState, answers, questions, selectedOption]);
 
+  const handlePerformanceDetected = useCallback((performance: 'high' | 'medium' | 'low') => {
+    setDevicePerformance(performance);
+  }, []);
+
   const handleRestart = () => {
     setGameState('welcome');
     setCurrentDifficultyIndex(0);
@@ -267,7 +280,6 @@ const Index = () => {
     setAnswers([]);
     setQuestions([]);
     setLevelResults([]);
-    toast.info("Returning to home", { duration: 1000 });
   };
 
   const getTotalScore = () => {
@@ -283,10 +295,19 @@ const Index = () => {
     return total > 0 ? Math.round((getTotalScore() / total) * 100) : 0;
   };
 
+  // Cinematic Intro
+  if (showIntro) {
+    return <CinematicIntro onComplete={() => setShowIntro(false)} />;
+  }
+
   // Welcome Screen
   if (gameState === 'welcome') {
     return (
-      <div className="min-h-screen flex items-center justify-center py-12 px-4 relative overflow-hidden">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="min-h-screen flex items-center justify-center py-12 px-4 relative overflow-hidden"
+      >
         {/* Animated Background */}
         <AnimatedBackground />
         
@@ -297,41 +318,72 @@ const Index = () => {
           <AchievementNotification achievement={notification} onClose={clearNotification} />
         )}
         <div className="container mx-auto max-w-4xl relative z-10">
-          <div className="text-center fade-in-up">
-            <div className="mb-8">
+          <motion.div
+            initial={{ y: 50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            className="text-center"
+          >
+            <motion.div
+              className="mb-8"
+              animate={{ 
+                rotate: [0, 10, -10, 0],
+                scale: [1, 1.1, 1]
+              }}
+              transition={{ duration: 3, repeat: Infinity }}
+            >
               <Sparkles className="w-20 h-20 mx-auto mb-6 text-accent animate-pulse drop-shadow-2xl" />
-            </div>
+            </motion.div>
             <h1 className="text-7xl md:text-8xl font-bold mb-6 text-shimmer drop-shadow-2xl">
               Gesture Quiz
             </h1>
-            <div className="h-1 w-32 mx-auto bg-gradient-accent rounded-full mb-8 shadow-glow"></div>
-            <p className="text-foreground text-2xl max-w-2xl mx-auto mb-12 leading-relaxed drop-shadow-lg font-medium">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: '128px' }}
+              transition={{ delay: 0.5, duration: 0.8 }}
+              className="h-1 mx-auto bg-gradient-accent rounded-full mb-8 shadow-glow"
+            />
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.7 }}
+              className="text-foreground text-2xl max-w-2xl mx-auto mb-12 leading-relaxed drop-shadow-lg font-medium"
+            >
               Test your knowledge using hand gestures. No mouse needed - just your hands!
-            </p>
+            </motion.p>
             
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Button
-                onClick={() => setGameState('difficulty-select')}
-                size="lg"
-                className="gap-3 bg-gradient-accent hover:opacity-90 px-12 py-8 text-2xl rounded-2xl transition-elegant hover:scale-105 shadow-elegant !text-black dark:!text-gray-100 backdrop-blur-sm"
-              >
-                <Play className="w-8 h-8 text-black dark:text-gray-100" />
-                Start Quiz
-              </Button>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.9 }}
+              className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+            >
+              <TiltCard>
+                <Button
+                  onClick={() => setGameState('difficulty-select')}
+                  size="lg"
+                  className="gap-3 bg-gradient-accent hover:opacity-90 px-12 py-8 text-2xl rounded-2xl transition-elegant hover:scale-105 shadow-elegant !text-black dark:!text-gray-100 backdrop-blur-sm holographic-shimmer"
+                >
+                  <Play className="w-8 h-8 text-black dark:text-gray-100" />
+                  Start Quiz
+                </Button>
+              </TiltCard>
               
-              <Button
-                onClick={() => navigate('/showcase')}
-                size="lg"
-                variant="outline"
-                className="gap-3 px-12 py-8 text-xl rounded-2xl transition-elegant hover:scale-105 border-2 border-accent/50 hover:border-accent backdrop-blur-sm"
-              >
-                <Sparkles className="w-7 h-7 text-accent" />
-                View Features
-              </Button>
-            </div>
-          </div>
+              <TiltCard>
+                <Button
+                  onClick={() => navigate('/showcase')}
+                  size="lg"
+                  variant="outline"
+                  className="gap-3 px-12 py-8 text-xl rounded-2xl transition-elegant hover:scale-105 border-2 border-accent/50 hover:border-accent backdrop-blur-sm neon-border"
+                >
+                  <Sparkles className="w-7 h-7 text-accent" />
+                  View Features
+                </Button>
+              </TiltCard>
+            </motion.div>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
@@ -339,7 +391,7 @@ const Index = () => {
   if (gameState === 'difficulty-select') {
     return (
       <div className="min-h-screen flex items-center justify-center py-12 px-4">
-        <BackToMenuButton />
+        <BackToMenuButton onRestart={handleRestart} />
         <ThemeToggle />
         <SoundToggle />
         {notification && (
@@ -424,39 +476,52 @@ const Index = () => {
     const percentage = Math.round((lastResult.score / lastResult.totalQuestions) * 100);
 
     return (
-      <div className="min-h-screen flex items-center justify-center py-12 px-4">
-        <BackToMenuButton />
+      <div className="min-h-screen py-12 px-4">
+        <BackToMenuButton onRestart={handleRestart} />
         <ThemeToggle />
         <SoundToggle />
         {notification && (
           <AchievementNotification achievement={notification} onClose={clearNotification} />
         )}
-        <div className="container mx-auto max-w-4xl">
-          <div className="text-center fade-in-up">
-            <Award className="w-24 h-24 mx-auto mb-6 text-accent animate-pulse" />
-            <h1 className="text-6xl font-bold mb-4 text-shimmer">
-              {lastResult.difficulty.charAt(0).toUpperCase() + lastResult.difficulty.slice(1)} Level Complete!
-            </h1>
-            <div className="h-1 w-24 mx-auto bg-gradient-accent rounded-full mb-8"></div>
-            
-            <div className="gradient-card rounded-3xl p-10 shadow-elegant border border-accent/20 mb-8 hover-lift">
-              <p className="text-muted-foreground text-xl mb-4">Your Score</p>
-              <p className="text-7xl font-bold text-accent mb-2">{lastResult.score}/{lastResult.totalQuestions}</p>
-              <p className="text-3xl font-semibold text-primary">{percentage}%</p>
+        <div className="container mx-auto max-w-7xl">
+          <div className="grid lg:grid-cols-2 gap-12 items-start">
+            {/* Left Column - Webcam (stays active) */}
+            <div className="space-y-8 flex flex-col items-center fade-in-up">
+              <WebcamGestureDetector 
+                key="webcam-stable"
+                onGestureDetected={handleGestureDetected}
+                onPerformanceDetected={handlePerformanceDetected}
+              />
+              <GestureGuide />
             </div>
 
-            <p className="text-muted-foreground text-xl mb-8">
-              Ready for the next challenge?
-            </p>
+            {/* Right Column - Results */}
+            <div className="text-center fade-in-up delay-200">
+              <Award className="w-24 h-24 mx-auto mb-6 text-accent animate-pulse" />
+              <h1 className="text-5xl font-bold mb-4 text-shimmer">
+                {lastResult.difficulty.charAt(0).toUpperCase() + lastResult.difficulty.slice(1)} Level Complete!
+              </h1>
+              <div className="h-1 w-24 mx-auto bg-gradient-accent rounded-full mb-8"></div>
+              
+              <div className="holographic-card animated-gradient-border rounded-3xl p-10 shadow-depth mb-8">
+                <p className="text-muted-foreground text-xl mb-4">Your Score</p>
+                <p className="text-7xl font-bold text-accent mb-2">{lastResult.score}/{lastResult.totalQuestions}</p>
+                <p className="text-3xl font-semibold text-primary">{percentage}%</p>
+              </div>
 
-            <Button
-              onClick={startNextLevel}
-              size="lg"
-              className="gap-3 bg-gradient-accent hover:opacity-90 px-12 py-8 text-2xl rounded-2xl transition-elegant hover:scale-105 shadow-elegant !text-black dark:!text-gray-100"
-            >
-              Continue to {DIFFICULTY_ORDER[currentDifficultyIndex + 1].toUpperCase()} Level
-              <ChevronRight className="w-8 h-8 text-black dark:text-gray-100" />
-            </Button>
+              <p className="text-muted-foreground text-xl mb-8">
+                Ready for the next challenge?
+              </p>
+
+              <Button
+                onClick={startNextLevel}
+                size="lg"
+                className="gap-3 bg-gradient-accent hover:opacity-90 px-12 py-8 text-2xl rounded-2xl transition-elegant hover:scale-105 shadow-elegant !text-black dark:!text-gray-100"
+              >
+                Continue to {DIFFICULTY_ORDER[currentDifficultyIndex + 1].toUpperCase()} Level
+                <ChevronRight className="w-8 h-8 text-black dark:text-gray-100" />
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -472,13 +537,24 @@ const Index = () => {
 
     return (
       <div className="min-h-screen py-12 px-4">
-        <BackToMenuButton />
+        <BackToMenuButton onRestart={handleRestart} />
         <ThemeToggle />
         <SoundToggle />
         {notification && (
           <AchievementNotification achievement={notification} onClose={clearNotification} />
         )}
-        <div className="container mx-auto max-w-5xl">
+        
+        <div className="container mx-auto max-w-7xl">
+          {/* Webcam stays active at top */}
+          <div className="flex justify-center mb-8 fade-in-up">
+            <WebcamGestureDetector 
+              key="webcam-stable"
+              onGestureDetected={handleGestureDetected}
+              onPerformanceDetected={handlePerformanceDetected}
+            />
+          </div>
+
+          <div className="max-w-5xl mx-auto">
           {/* Header */}
           <div className="text-center mb-12 fade-in-up">
             {passed ? (
@@ -606,6 +682,7 @@ const Index = () => {
               </Button>
             </div>
           </div>
+          </div>
         </div>
       </div>
     );
@@ -614,7 +691,7 @@ const Index = () => {
   // Playing Screen
   return (
     <div className="min-h-screen py-12 px-4">
-      <BackToMenuButton />
+      <BackToMenuButton onRestart={handleRestart} />
       <ThemeToggle />
       <SoundToggle />
       <PerformanceMonitor 
@@ -644,8 +721,9 @@ const Index = () => {
           {/* Left Column - Webcam & Guide */}
           <div className="space-y-8 flex flex-col items-center fade-in-up delay-200">
             <WebcamGestureDetector 
+              key="webcam-stable"
               onGestureDetected={handleGestureDetected}
-              onPerformanceDetected={setDevicePerformance}
+              onPerformanceDetected={handlePerformanceDetected}
             />
             <GestureGuide />
           </div>
@@ -663,6 +741,8 @@ const Index = () => {
                 options={currentQuestion.options}
                 selectedOption={selectedOption}
                 onOptionSelect={handleOptionSelect}
+                correctAnswer={currentQuestion.correctAnswer}
+                showFeedback={showFeedback}
               />
             )}
 

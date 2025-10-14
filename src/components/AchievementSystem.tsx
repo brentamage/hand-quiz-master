@@ -56,7 +56,7 @@ const AchievementNotification = ({ achievement, onClose }: AchievementNotificati
   return (
     <div className="fixed top-24 right-8 z-50 animate-slide-in-right">
       <div className={`bg-gradient-to-br ${rarityColors[achievement.rarity]} p-1 rounded-2xl shadow-2xl`}>
-        <div className="bg-card rounded-xl p-6 border-2 ${rarityBorder[achievement.rarity]}">
+        <div className={`bg-card rounded-xl p-6 border-2 ${rarityBorder[achievement.rarity]}`}>
           <div className="flex items-start gap-4">
             <div className="text-5xl animate-bounce">
               {achievement.icon}

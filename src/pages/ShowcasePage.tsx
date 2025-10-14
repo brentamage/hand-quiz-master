@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Sparkles, Trophy, Volume2, Hand, BarChart3, Play } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { SoundToggle, useSoundEffects } from '@/components/SoundEffects';
-import PerformanceAnalytics from '@/components/PerformanceAnalytics';
+import EnhancedLeaderboard from '@/components/EnhancedLeaderboard';
 import AchievementNotification, { useAchievements } from '@/components/AchievementSystem';
 import GestureTrainingMode from '@/components/GestureTrainingMode';
 import BackToMenuButton from '@/components/BackToMenuButton';
 import ThemeToggle from '@/components/ThemeToggle';
+import TiltCard from '@/components/TiltCard';
 
 type ShowcaseView = 'menu' | 'sounds' | 'analytics' | 'achievements' | 'training';
 
@@ -53,11 +55,11 @@ const ShowcasePage = () => {
     },
     {
       id: 'analytics' as ShowcaseView,
-      icon: <BarChart3 className="w-12 h-12" />,
-      title: 'Performance Analytics',
-      description: 'Beautiful charts and AI-powered insights',
+      icon: <Trophy className="w-12 h-12" />,
+      title: 'Leaderboard',
+      description: 'Top scores and quiz champions',
       color: 'from-green-500 to-green-600',
-      demo: 'View detailed performance metrics'
+      demo: 'View top performers'
     },
     {
       id: 'achievements' as ShowcaseView,
@@ -122,14 +124,18 @@ const ShowcasePage = () => {
       case 'analytics':
         return (
           <div className="space-y-8">
-            <div className="text-center">
-              <BarChart3 className="w-20 h-20 mx-auto mb-4 text-accent" />
-              <h2 className="text-4xl font-bold mb-4">Performance Analytics</h2>
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center"
+            >
+              <Trophy className="w-20 h-20 mx-auto mb-4 text-accent" />
+              <h2 className="text-4xl font-bold mb-4">Leaderboard</h2>
               <p className="text-muted-foreground text-lg mb-8">
-                Comprehensive performance tracking with beautiful visualizations
+                Top quiz performers and high scores
               </p>
-            </div>
-            <PerformanceAnalytics performanceData={samplePerformanceData} />
+            </motion.div>
+            <EnhancedLeaderboard />
           </div>
         );
 
@@ -213,22 +219,29 @@ const ShowcasePage = () => {
 
             <div className="grid md:grid-cols-2 gap-6">
               {features.map((feature, index) => (
-                <div
-                  key={feature.id}
-                  onClick={() => setCurrentView(feature.id)}
-                  className="gradient-card rounded-2xl p-8 border border-accent/20 hover-lift cursor-pointer transition-elegant group fade-in-up"
-                  style={{ animationDelay: `${index * 100}ms` }}
-                >
-                  <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-6 group-hover:scale-110 transition-elegant`}>
-                    <div className="text-white">{feature.icon}</div>
-                  </div>
-                  <h3 className="text-2xl font-bold mb-3">{feature.title}</h3>
-                  <p className="text-muted-foreground mb-4">{feature.description}</p>
-                  <div className="flex items-center gap-2 text-accent font-semibold">
-                    <Play className="w-4 h-4" />
-                    <span className="text-sm">{feature.demo}</span>
-                  </div>
-                </div>
+                <TiltCard key={feature.id} intensity={10}>
+                  <motion.div
+                    initial={{ opacity: 0, y: 50 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    onClick={() => setCurrentView(feature.id)}
+                    className="holographic-card animated-gradient-border rounded-2xl p-8 shadow-depth cursor-pointer transition-elegant group hover:scale-105"
+                  >
+                    <motion.div
+                      className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-6 shadow-lg`}
+                      whileHover={{ scale: 1.2, rotate: 360 }}
+                      transition={{ type: 'spring', stiffness: 300 }}
+                    >
+                      <div className="text-white">{feature.icon}</div>
+                    </motion.div>
+                    <h3 className="text-2xl font-bold mb-3">{feature.title}</h3>
+                    <p className="text-muted-foreground mb-4">{feature.description}</p>
+                    <div className="flex items-center gap-2 text-accent font-semibold">
+                      <Play className="w-4 h-4" />
+                      <span className="text-sm">{feature.demo}</span>
+                    </div>
+                  </motion.div>
+                </TiltCard>
               ))}
             </div>
 

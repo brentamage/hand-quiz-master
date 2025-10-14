@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import * as tf from "@tensorflow/tfjs";
 import * as tmImage from "@teachablemachine/image";
 import CameraErrorHandler from "./CameraErrorHandler";
+import HandSkeletonOverlay from "./HandSkeletonOverlay";
+import GestureTrailEffect from "./GestureTrailEffect";
 import { 
   getDeviceCapabilities, 
   requestCameraAccess, 
@@ -14,7 +16,6 @@ import {
   MemoryMonitor,
   isMemoryCritical 
 } from "@/utils/memoryManager";
-import { toast } from "sonner";
 
 interface WebcamGestureDetectorProps {
   onGestureDetected: (gesture: string) => void;
@@ -36,7 +37,7 @@ const WebcamGestureDetector = ({ onGestureDetected, onPerformanceDetected }: Web
   const lastGestureRef = useRef<string>("");
   const lastDetectionTimeRef = useRef<number>(0);
   const memoryMonitorRef = useRef<MemoryMonitor | null>(null);
-  const predictionIntervalRef = useRef<number>(100); // Default 10 FPS
+  const predictionIntervalRef = useRef<number>(150); // Default ~6.6 FPS for smoother performance
   const lastPredictionTimeRef = useRef<number>(0);
 
   // Initialize device capabilities and memory monitoring
@@ -51,7 +52,6 @@ const WebcamGestureDetector = ({ onGestureDetected, onPerformanceDetected }: Web
         const { webgl } = checkWebGLSupport();
         if (!webgl) {
           setError("WebGL is not supported on this device. The app may not work properly.");
-          toast.error("WebGL not supported", { duration: 5000 });
           return;
         }
 
@@ -61,23 +61,28 @@ const WebcamGestureDetector = ({ onGestureDetected, onPerformanceDetected }: Web
         
         // Get recommended settings based on device performance
         const settings = getRecommendedSettings(capabilities.performance);
-        predictionIntervalRef.current = settings.predictionInterval;
+        
+        // Optimize prediction interval for smooth performance
+        if (capabilities.performance === 'high') {
+          predictionIntervalRef.current = 100; // 10 FPS
+        } else if (capabilities.performance === 'medium') {
+          predictionIntervalRef.current = 150; // ~6.6 FPS
+        } else {
+          predictionIntervalRef.current = 250; // 4 FPS for low-end devices
+        }
         
         if (onPerformanceDetected) {
           onPerformanceDetected(capabilities.performance);
         }
 
-        // Notify user of device performance
-        if (capabilities.performance === 'low') {
-          toast.warning("Low-end device detected. Performance may be limited.", { duration: 5000 });
-        }
+        // Device performance detected (no toast notification)
 
         // Initialize memory monitor
         memoryMonitorRef.current = new MemoryMonitor(100);
         memoryMonitorRef.current.start(5000);
         memoryMonitorRef.current.onUpdate((memory) => {
           if (isMemoryCritical()) {
-            toast.error("High memory usage detected. Consider refreshing the page.", { duration: 5000 });
+            console.warn("High memory usage detected");
           }
         });
 
@@ -125,9 +130,10 @@ const WebcamGestureDetector = ({ onGestureDetected, onPerformanceDetected }: Web
         
         setLoadingMessage("Initializing camera...");
         
-        // Try Teachable Machine webcam first
+        // Try Teachable Machine webcam first with optimized resolution
         try {
-          const webcam = new tmImage.Webcam(320, 320, true);
+          // Use 224x224 for better performance (standard MobileNet input size)
+          const webcam = new tmImage.Webcam(224, 224, true);
           await webcam.setup({ facingMode: "user" });
           await webcam.play();
           webcamInstanceRef.current = webcam;
@@ -147,7 +153,6 @@ const WebcamGestureDetector = ({ onGestureDetected, onPerformanceDetected }: Web
         
         setIsModelLoaded(true);
         setError(null);
-        toast.success("Camera initialized successfully!");
         
         // Start prediction loop with throttling
         const predict = async () => {
@@ -189,20 +194,34 @@ const WebcamGestureDetector = ({ onGestureDetected, onPerformanceDetected }: Web
               pred.probability > max.probability ? pred : max
             , predictions[0]);
             
-            // Only update if confidence is above threshold
-            if (maxPrediction.probability > 0.8) {
+            // Higher confidence threshold for more accurate detection
+            const CONFIDENCE_THRESHOLD = 0.90; // Increased from 0.8 to 0.90 for better accuracy
+            const DEBOUNCE_TIME = 1500; // Reduced from 2000ms to 1500ms for faster response
+            
+            if (maxPrediction.probability > CONFIDENCE_THRESHOLD) {
               const gestureName = maxPrediction.className;
-              setCurrentGesture(gestureName);
               
-              // Debounce: only trigger if gesture changed and 2 seconds have passed
-              const detectionNow = Date.now();
-              if (gestureName !== lastGestureRef.current && detectionNow - lastDetectionTimeRef.current > 2000) {
-                lastGestureRef.current = gestureName;
-                lastDetectionTimeRef.current = detectionNow;
-                onGestureDetected(gestureName);
+              // Don't show "background" as current gesture
+              if (gestureName !== "background") {
+                setCurrentGesture(gestureName);
+                
+                // Debounce: only trigger if gesture changed and debounce time has passed
+                const detectionNow = Date.now();
+                if (gestureName !== lastGestureRef.current && detectionNow - lastDetectionTimeRef.current > DEBOUNCE_TIME) {
+                  lastGestureRef.current = gestureName;
+                  lastDetectionTimeRef.current = detectionNow;
+                  onGestureDetected(gestureName);
+                }
+              } else {
+                setCurrentGesture("No gesture detected");
               }
             } else {
-              setCurrentGesture("No gesture detected");
+              // Show confidence level for debugging
+              if (maxPrediction.probability > 0.7 && maxPrediction.className !== "background") {
+                setCurrentGesture(`${maxPrediction.className} (${Math.round(maxPrediction.probability * 100)}%)`);
+              } else {
+                setCurrentGesture("No gesture detected");
+              }
             }
             
             // Monitor memory every 100 predictions
@@ -261,7 +280,6 @@ const WebcamGestureDetector = ({ onGestureDetected, onPerformanceDetected }: Web
 
   // Fallback to keyboard/mouse
   const handleUseFallback = useCallback(() => {
-    toast.info("Gesture controls disabled. Use keyboard or mouse instead.");
     setError(null);
   }, []);
 
@@ -285,9 +303,20 @@ const WebcamGestureDetector = ({ onGestureDetected, onPerformanceDetected }: Web
           autoPlay
           playsInline
           muted
-          className="rounded-2xl border-2 border-accent/30 shadow-elegant w-80 h-80 object-cover transition-elegant hover:border-accent/50"
+          className="rounded-2xl border-2 border-accent/30 shadow-elegant w-80 h-80 object-cover transition-elegant hover:border-accent/50 neon-border"
           style={{ transform: 'scaleX(-1)' }}
         />
+        
+        {/* 3D Hand Skeleton Overlay */}
+        {isModelLoaded && webcamRef.current && (
+          <HandSkeletonOverlay videoElement={webcamRef.current} enabled={true} />
+        )}
+        
+        {/* Gesture Trail Effect */}
+        {isModelLoaded && webcamRef.current && (
+          <GestureTrailEffect videoElement={webcamRef.current} enabled={true} />
+        )}
+        
         {!isModelLoaded && (
           <div className="absolute inset-0 flex items-center justify-center bg-card/90 rounded-2xl backdrop-blur-sm">
             <div className="text-center">
@@ -299,13 +328,13 @@ const WebcamGestureDetector = ({ onGestureDetected, onPerformanceDetected }: Web
         
         {/* Performance indicator */}
         {isModelLoaded && inferenceTime > 0 && (
-          <div className="absolute top-2 right-2 bg-black/70 backdrop-blur-sm rounded-lg px-3 py-1 text-xs">
+          <div className="absolute top-2 right-2 bg-black/70 backdrop-blur-sm rounded-lg px-3 py-1 text-xs z-20">
             <span className="text-white">{inferenceTime}ms</span>
           </div>
         )}
       </div>
       
-      <div className="gradient-card rounded-xl px-8 py-5 shadow-elegant border border-accent/20 transition-elegant hover:border-accent/40">
+      <div className="holographic-card animated-gradient-border rounded-xl px-8 py-5 shadow-depth transition-elegant hover:scale-105">
         <p className="text-sm text-muted-foreground mb-2 uppercase tracking-wider">Current Gesture</p>
         <p className="text-2xl font-bold text-accent animate-pulse-glow">{currentGesture}</p>
       </div>

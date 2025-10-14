@@ -4,13 +4,18 @@ import { useNavigate } from "react-router-dom";
 
 interface BackToMenuButtonProps {
   className?: string;
+  onRestart?: () => void;
 }
 
-const BackToMenuButton = ({ className = '' }: BackToMenuButtonProps) => {
+const BackToMenuButton = ({ className = '', onRestart }: BackToMenuButtonProps) => {
   const navigate = useNavigate();
 
   const handleBackToMenu = () => {
-    navigate('/');
+    if (onRestart) {
+      onRestart();
+    } else {
+      navigate('/');
+    }
   };
 
   return (
