@@ -6,6 +6,7 @@ import QuizQuestion from "@/components/QuizQuestion";
 import ThemeToggle from "@/components/ThemeToggle";
 import ThemeSelector from "@/components/ThemeSelector";
 import GestureGuide from "@/components/GestureGuide";
+import ProgressBar from "@/components/ProgressBar";
 
 // Lazy load heavy components
 const AnimatedBackground = lazy(() => import("@/components/AnimatedBackground"));
