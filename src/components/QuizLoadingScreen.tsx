@@ -78,12 +78,12 @@ const QuizLoadingScreen = ({ onComplete, difficulty }: QuizLoadingScreenProps) =
               key={i}
               className="absolute w-1 h-1 bg-purple-500 rounded-full"
               initial={{
-                x: Math.random() * window.innerWidth,
-                y: Math.random() * window.innerHeight,
+                x: typeof window !== 'undefined' ? Math.random() * window.innerWidth : Math.random() * 1920,
+                y: typeof window !== 'undefined' ? Math.random() * window.innerHeight : Math.random() * 1080,
                 opacity: 0
               }}
               animate={{
-                y: [null, Math.random() * window.innerHeight],
+                y: [null, typeof window !== 'undefined' ? Math.random() * window.innerHeight : Math.random() * 1080],
                 opacity: [0, 1, 0],
               }}
               transition={{
