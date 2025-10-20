@@ -2,9 +2,9 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import * as tf from "@tensorflow/tfjs";
 import * as tmPose from "@teachablemachine/pose";
 import CameraErrorHandler from "./CameraErrorHandler";
-// import HandSkeletonOverlay from "./HandSkeletonOverlay"; // Disabled due to memory issues
 import CameraCalibrationOverlay from "./CameraCalibrationOverlay";
-// import GestureTrailEffect from "./GestureTrailEffect";
+import PoseSkeletonOverlay from "./PoseSkeletonOverlay";
+import FullBodyFramingGuide from "./FullBodyFramingGuide";
 import { 
   getDeviceCapabilities, 
   requestCameraAccess, 
@@ -17,6 +17,12 @@ import {
   MemoryMonitor,
   isMemoryCritical 
 } from "@/utils/memoryManager";
+import { 
+  AdaptiveFrameRateController, 
+  getOptimalPoseSettings,
+  poseCache,
+  hasPoseChangedSignificantly 
+} from "@/utils/poseOptimization";
 
 interface WebcamGestureDetectorProps {
   onGestureDetected: (gesture: string) => void;
@@ -31,11 +37,13 @@ const WebcamGestureDetector = ({
 }: WebcamGestureDetectorProps) => {
   const webcamRef = useRef<HTMLVideoElement>(null);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
-  const [currentGesture, setCurrentGesture] = useState<string>("No gesture detected");
+  const [currentPoseDetected, setCurrentPoseDetected] = useState<string>("No pose detected");
   const [error, setError] = useState<string | null>(null);
   const [loadingMessage, setLoadingMessage] = useState<string>("Initializing...");
   const [inferenceTime, setInferenceTime] = useState<number>(0);
   const [cameraQuality, setCameraQuality] = useState<number>(0);
+  const [currentPose, setCurrentPose] = useState<any>(null);
+  const [devicePerformance, setDevicePerformance] = useState<'high' | 'medium' | 'low'>('medium');
   
   const modelRef = useRef<tmPose.CustomPoseNet | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -45,6 +53,8 @@ const WebcamGestureDetector = ({
   const memoryMonitorRef = useRef<MemoryMonitor | null>(null);
   const predictionIntervalRef = useRef<number>(150); // Default ~6.6 FPS for smoother performance
   const lastPredictionTimeRef = useRef<number>(0);
+  const frameRateControllerRef = useRef<AdaptiveFrameRateController | null>(null);
+  const lastPoseRef = useRef<any>(null);
 
   // Initialize device capabilities and memory monitoring
   useEffect(() => {
@@ -68,14 +78,15 @@ const WebcamGestureDetector = ({
         // Get recommended settings based on device performance
         const settings = getRecommendedSettings(capabilities.performance);
         
-        // Optimize prediction interval for smooth performance
-        if (capabilities.performance === 'high') {
-          predictionIntervalRef.current = 100; // 10 FPS
-        } else if (capabilities.performance === 'medium') {
-          predictionIntervalRef.current = 150; // ~6.6 FPS
-        } else {
-          predictionIntervalRef.current = 250; // 4 FPS for low-end devices
-        }
+        // Store device performance
+        setDevicePerformance(capabilities.performance);
+        
+        // Get optimal settings for this device
+        const optimalSettings = getOptimalPoseSettings(capabilities.performance);
+        predictionIntervalRef.current = optimalSettings.frameRate;
+        
+        // Initialize adaptive frame rate controller
+        frameRateControllerRef.current = new AdaptiveFrameRateController(optimalSettings.frameRate);
         
         if (onPerformanceDetected) {
           onPerformanceDetected(capabilities.performance);
@@ -198,6 +209,17 @@ const WebcamGestureDetector = ({
             const inferenceMs = Math.round(endTime - startTime);
             setInferenceTime(inferenceMs);
             
+            // Update pose state for overlays (only if changed significantly)
+            if (hasPoseChangedSignificantly(lastPoseRef.current, pose, 5)) {
+              setCurrentPose(pose);
+              lastPoseRef.current = pose;
+            }
+            
+            // Adaptive frame rate adjustment
+            if (frameRateControllerRef.current) {
+              predictionIntervalRef.current = frameRateControllerRef.current.update(inferenceMs);
+            }
+            
             // Dispatch event for performance monitor
             window.dispatchEvent(new CustomEvent('inferenceTime', { detail: inferenceMs }));
             
@@ -211,28 +233,28 @@ const WebcamGestureDetector = ({
             const DEBOUNCE_TIME = 1500; // Reduced from 2000ms to 1500ms for faster response
             
             if (maxPrediction.probability > CONFIDENCE_THRESHOLD) {
-              const gestureName = maxPrediction.className;
+              const poseName = maxPrediction.className;
               
-              // Don't show "background" as current gesture
-              if (gestureName !== "background") {
-                setCurrentGesture(gestureName);
+              // Don't show "background" as current pose
+              if (poseName !== "background") {
+                setCurrentPoseDetected(poseName);
                 
-                // Debounce: only trigger if gesture changed and debounce time has passed
+                // Debounce: only trigger if pose changed and debounce time has passed
                 const detectionNow = Date.now();
-                if (gestureName !== lastGestureRef.current && detectionNow - lastDetectionTimeRef.current > DEBOUNCE_TIME) {
-                  lastGestureRef.current = gestureName;
+                if (poseName !== lastGestureRef.current && detectionNow - lastDetectionTimeRef.current > DEBOUNCE_TIME) {
+                  lastGestureRef.current = poseName;
                   lastDetectionTimeRef.current = detectionNow;
-                  onGestureDetected(gestureName);
+                  onGestureDetected(poseName);
                 }
               } else {
-                setCurrentGesture("No gesture detected");
+                setCurrentPoseDetected("No pose detected");
               }
             } else {
               // Show confidence level for debugging
               if (maxPrediction.probability > 0.7 && maxPrediction.className !== "background") {
-                setCurrentGesture(`${maxPrediction.className} (${Math.round(maxPrediction.probability * 100)}%)`);
+                setCurrentPoseDetected(`${maxPrediction.className} (${Math.round(maxPrediction.probability * 100)}%)`);
               } else {
-                setCurrentGesture("No gesture detected");
+                setCurrentPoseDetected("No pose detected");
               }
             }
             
@@ -321,6 +343,25 @@ const WebcamGestureDetector = ({
           style={{ transform: 'scaleX(-1)' }}
         />
         
+        {/* Full Body Framing Guide */}
+        {isModelLoaded && webcamRef.current && currentPose && (
+          <FullBodyFramingGuide 
+            pose={currentPose}
+            videoElement={webcamRef.current}
+            enabled={true}
+          />
+        )}
+        
+        {/* Pose Skeleton Overlay */}
+        {isModelLoaded && webcamRef.current && currentPose && devicePerformance !== 'low' && (
+          <PoseSkeletonOverlay 
+            pose={currentPose}
+            videoElement={webcamRef.current}
+            enabled={true}
+            showConfidence={devicePerformance === 'high'}
+          />
+        )}
+        
         {/* Camera Calibration Overlay */}
         {showCalibration && isModelLoaded && webcamRef.current && (
           <CameraCalibrationOverlay 
@@ -332,17 +373,6 @@ const WebcamGestureDetector = ({
             }}
           />
         )}
-
-        {/* 3D Hand Skeleton Overlay - Disabled by default due to memory issues */}
-        {/* Uncomment to enable hand skeleton visualization */}
-        {/* {isModelLoaded && webcamRef.current && (
-          <HandSkeletonOverlay videoElement={webcamRef.current} enabled={true} />
-        )} */}
-        
-        {/* Gesture Trail Effect - Temporarily disabled */}
-        {/* {isModelLoaded && webcamRef.current && (
-          <GestureTrailEffect videoElement={webcamRef.current} enabled={true} />
-        )} */}
         
         {!isModelLoaded && (
           <div className="absolute inset-0 flex items-center justify-center bg-card/90 rounded-2xl backdrop-blur-sm">
@@ -352,18 +382,11 @@ const WebcamGestureDetector = ({
             </div>
           </div>
         )}
-        
-        {/* Performance indicator */}
-        {isModelLoaded && inferenceTime > 0 && (
-          <div className="absolute top-2 right-2 bg-black/70 backdrop-blur-sm rounded-lg px-3 py-1 text-xs z-20">
-            <span className="text-white">{inferenceTime}ms</span>
-          </div>
-        )}
       </div>
       
       <div className="holographic-card animated-gradient-border rounded-xl px-8 py-5 shadow-depth transition-elegant hover:scale-105">
         <p className="text-sm text-muted-foreground mb-2 uppercase tracking-wider">Current Pose</p>
-        <p className="text-2xl font-bold text-accent animate-pulse-glow">{currentGesture}</p>
+        <p className="text-2xl font-bold text-accent animate-pulse-glow">{currentPoseDetected}</p>
         
         {/* Camera Quality Indicator */}
         {cameraQuality > 0 && (

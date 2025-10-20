@@ -1,7 +1,6 @@
 import { Trophy, Medal, Award, Crown, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import confetti from "canvas-confetti";
 
 interface LeaderboardEntry {
   name: string;
@@ -63,20 +62,9 @@ const EnhancedLeaderboard = () => {
 
   const handleEntryClick = (index: number) => {
     setHighlightedIndex(index);
-    
-    // Trigger confetti for top 3
-    if (index < 3) {
-      const colors = index === 0 ? ['#FFD700', '#FFA500'] : index === 1 ? ['#C0C0C0', '#A8A8A8'] : ['#CD7F32', '#8B4513'];
-      confetti({
-        particleCount: 50,
-        spread: 60,
-        origin: { y: 0.6 },
-        colors
-      });
-    }
-    
-    setTimeout(() => setHighlightedIndex(null), 2000);
   };
+
+  setTimeout(() => setHighlightedIndex(null), 2000);
 
   if (entries.length === 0) {
     return (

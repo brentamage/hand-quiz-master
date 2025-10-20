@@ -7,7 +7,7 @@ Your Gesture Quiz app now has **4 premium features** that will impress your CEO:
 1. **🔊 Sound Effects** - Integrated into quiz gameplay
 2. **📊 Performance Analytics** - Beautiful charts and insights
 3. **🏆 Achievement System** - Unlockable badges with celebrations
-4. **👋 Gesture Training** - Interactive tutorial mode
+4. **👋 Pose Training** - Interactive tutorial mode
 
 ---
 
@@ -47,8 +47,8 @@ Click **"View Features"** button on home page
 
 #### **Training:**
 - Go to `/showcase`
-- Click "Gesture Training"
-- Practice hand gestures with real-time feedback
+- Click "Pose Training"
+- Practice body poses with real-time feedback
 
 ---
 
@@ -122,7 +122,7 @@ Click **"View Features"** button on home page
 4. Sharpshooter - 5 correct in a row
 5. Quiz Master - Complete all levels
 6. On Fire! - 10 correct in a row
-7. Gesture Guru - Use only gestures
+7. Pose Guru - Use only poses
 8. Challenge Accepted - Complete hard mode
 
 **Rarity Levels:**
@@ -133,10 +133,10 @@ Click **"View Features"** button on home page
 
 ---
 
-### **4. Gesture Training Mode**
+### **4. Pose Training Mode**
 **Location:** `/showcase` → Training
 **What it does:**
-- Teaches 6 hand gestures
+- Teaches 6 body poses
 - Real-time feedback
 - Pro tips for each gesture
 - Accuracy tracking

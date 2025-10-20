@@ -95,8 +95,7 @@ const Index = () => {
       setTimeout(() => {
         navigate('/leaderboard', { 
           state: { 
-            passed, 
-            showConfetti: completedAllLevels && passed // Only show confetti if passed AND completed all levels
+            passed
           } 
         });
       }, 2000); // 2 second delay to show results briefly
@@ -413,7 +412,7 @@ const Index = () => {
               <Sparkles className="w-20 h-20 mx-auto mb-6 text-accent animate-pulse drop-shadow-2xl" />
             </motion.div>
             <h1 className="text-7xl md:text-8xl font-bold mb-6 text-shimmer drop-shadow-2xl">
-              Gesture Quiz
+              Pose Quiz
             </h1>
             <motion.div
               initial={{ width: 0 }}

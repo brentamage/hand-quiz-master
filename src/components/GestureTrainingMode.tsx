@@ -3,89 +3,89 @@ import { Hand, CheckCircle, XCircle, Target, Sparkles, Trophy, ArrowRight } from
 import { Button } from './ui/button';
 import WebcamGestureDetector from './WebcamGestureDetector';
 
-interface GestureLesson {
+interface PoseLesson {
   id: string;
-  gesture: string;
+  pose: string;
   name: string;
   description: string;
   tips: string[];
   difficulty: 'easy' | 'medium' | 'hard';
 }
 
-const gestureLessons: GestureLesson[] = [
+const poseLessons: PoseLesson[] = [
   {
-    id: 'gesture-a',
-    gesture: 'A',
-    name: 'Gesture A',
-    description: 'Show the "A" hand sign clearly to the camera',
+    id: 'pose-a',
+    pose: 'A',
+    name: 'Pose A',
+    description: 'Show the "A" pose clearly to the camera',
     tips: [
-      'Keep your hand steady and centered',
-      'Ensure good lighting on your hand',
-      'Hold the gesture for 2 seconds',
-      'Keep fingers clearly visible'
+      'Keep your body steady and centered',
+      'Ensure good lighting on your body',
+      'Hold the pose for 2 seconds',
+      'Keep your pose clearly visible'
     ],
     difficulty: 'easy'
   },
   {
-    id: 'gesture-b',
-    gesture: 'B',
-    name: 'Gesture B',
-    description: 'Show the "B" hand sign clearly to the camera',
+    id: 'pose-b',
+    pose: 'B',
+    name: 'Pose B',
+    description: 'Show the "B" pose clearly to the camera',
     tips: [
-      'Make the gesture distinct from A',
+      'Make the pose distinct from A',
       'Hold steady in the camera frame',
-      'Maintain consistent hand position',
+      'Maintain consistent body position',
       'Avoid quick movements'
     ],
     difficulty: 'easy'
   },
   {
-    id: 'gesture-c',
-    gesture: 'C',
-    name: 'Gesture C',
-    description: 'Show the "C" hand sign clearly to the camera',
+    id: 'pose-c',
+    pose: 'C',
+    name: 'Pose C',
+    description: 'Show the "C" pose clearly to the camera',
     tips: [
       'Form a clear C shape',
-      'Keep hand at medium distance',
-      'Ensure all fingers are visible',
+      'Keep body at medium distance',
+      'Ensure all body parts are visible',
       'Hold for full detection'
     ],
     difficulty: 'medium'
   },
   {
-    id: 'gesture-d',
-    gesture: 'D',
-    name: 'Gesture D',
-    description: 'Show the "D" hand sign clearly to the camera',
+    id: 'pose-d',
+    pose: 'D',
+    name: 'Pose D',
+    description: 'Show the "D" pose clearly to the camera',
     tips: [
-      'Make a distinct D gesture',
-      'Keep hand centered in frame',
+      'Make a distinct D pose',
+      'Keep body centered in frame',
       'Maintain good contrast',
       'Hold steady for 2 seconds'
     ],
     difficulty: 'medium'
   },
   {
-    id: 'gesture-next',
-    gesture: 'Next',
-    name: 'Next Gesture',
-    description: 'Show the "Next" hand sign to navigate forward',
+    id: 'pose-next',
+    pose: 'Next',
+    name: 'Next Pose',
+    description: 'Show the "Next" pose to navigate forward',
     tips: [
       'Use a clear forward motion',
-      'Keep gesture consistent',
+      'Keep pose consistent',
       'Hold at the end position',
-      'Ensure camera can see full gesture'
+      'Ensure camera can see full pose'
     ],
     difficulty: 'hard'
   },
   {
-    id: 'gesture-previous',
-    gesture: 'Previous',
-    name: 'Previous Gesture',
-    description: 'Show the "Previous" hand sign to navigate backward',
+    id: 'pose-previous',
+    pose: 'Previous',
+    name: 'Previous Pose',
+    description: 'Show the "Previous" pose to navigate backward',
     tips: [
       'Use a clear backward motion',
-      'Mirror the Next gesture',
+      'Mirror the Next pose',
       'Hold at the end position',
       'Keep movements smooth'
     ],
@@ -93,12 +93,12 @@ const gestureLessons: GestureLesson[] = [
   }
 ];
 
-interface GestureTrainingModeProps {
+interface PoseTrainingModeProps {
   onComplete?: () => void;
   onExit?: () => void;
 }
 
-const GestureTrainingMode = ({ onComplete, onExit }: GestureTrainingModeProps) => {
+const PoseTrainingMode = ({ onComplete, onExit }: PoseTrainingModeProps) => {
   const [currentLessonIndex, setCurrentLessonIndex] = useState(0);
   const [attempts, setAttempts] = useState(0);
   const [successes, setSuccesses] = useState(0);
@@ -106,8 +106,8 @@ const GestureTrainingMode = ({ onComplete, onExit }: GestureTrainingModeProps) =
   const [detectionStatus, setDetectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set());
 
-  const currentLesson = gestureLessons[currentLessonIndex];
-  const progress = (completedLessons.size / gestureLessons.length) * 100;
+  const currentLesson = poseLessons[currentLessonIndex];
+  const progress = (completedLessons.size / poseLessons.length) * 100;
 
   useEffect(() => {
     if (detectionStatus !== 'idle') {
@@ -116,21 +116,21 @@ const GestureTrainingMode = ({ onComplete, onExit }: GestureTrainingModeProps) =
     }
   }, [detectionStatus]);
 
-  const handleGestureDetected = (gesture: string) => {
+  const handlePoseDetected = (pose: string) => {
     if (!isDetecting) return;
 
-    const normalizedGesture = gesture.toLowerCase().trim().replace('.', '');
-    const expectedGesture = currentLesson.gesture.toLowerCase();
+    const normalizedPose = pose.toLowerCase().trim().replace('.', '');
+    const expectedPose = currentLesson.pose.toLowerCase();
 
     setAttempts(prev => prev + 1);
 
-    if (normalizedGesture === expectedGesture) {
+    if (normalizedPose === expectedPose) {
       setSuccesses(prev => prev + 1);
       setDetectionStatus('success');
       setCompletedLessons(prev => new Set([...prev, currentLesson.id]));
       
       setTimeout(() => {
-        if (currentLessonIndex < gestureLessons.length - 1) {
+        if (currentLessonIndex < poseLessons.length - 1) {
           setCurrentLessonIndex(prev => prev + 1);
           setIsDetecting(false);
         } else {
@@ -143,7 +143,7 @@ const GestureTrainingMode = ({ onComplete, onExit }: GestureTrainingModeProps) =
   };
 
   const handleNext = () => {
-    if (currentLessonIndex < gestureLessons.length - 1) {
+    if (currentLessonIndex < poseLessons.length - 1) {
       setCurrentLessonIndex(prev => prev + 1);
       setIsDetecting(false);
       setDetectionStatus('idle');
@@ -171,10 +171,10 @@ const GestureTrainingMode = ({ onComplete, onExit }: GestureTrainingModeProps) =
         <div className="text-center mb-8 fade-in-up">
           <div className="flex items-center justify-center gap-3 mb-4">
             <Hand className="w-12 h-12 text-accent" />
-            <h1 className="text-5xl font-bold text-shimmer">Gesture Training</h1>
+            <h1 className="text-5xl font-bold text-shimmer">Pose Training</h1>
           </div>
           <p className="text-muted-foreground text-lg">
-            Master hand gestures with guided practice
+            Master body poses with guided practice
           </p>
         </div>
 
@@ -191,7 +191,7 @@ const GestureTrainingMode = ({ onComplete, onExit }: GestureTrainingModeProps) =
             />
           </div>
           <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-            <span>{completedLessons.size} / {gestureLessons.length} completed</span>
+            <span>{completedLessons.size} / {poseLessons.length} completed</span>
             <span>Accuracy: {attempts > 0 ? Math.round((successes / attempts) * 100) : 0}%</span>
           </div>
         </div>
@@ -200,7 +200,7 @@ const GestureTrainingMode = ({ onComplete, onExit }: GestureTrainingModeProps) =
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Left: Webcam */}
           <div className="space-y-6 fade-in-up delay-300">
-            <WebcamGestureDetector onGestureDetected={handleGestureDetected} />
+            <WebcamGestureDetector onGestureDetected={handlePoseDetected} />
             
             {/* Detection Status */}
             {detectionStatus !== 'idle' && (
@@ -215,7 +215,7 @@ const GestureTrainingMode = ({ onComplete, onExit }: GestureTrainingModeProps) =
                       <CheckCircle className="w-8 h-8 text-success" />
                       <div>
                         <p className="font-bold text-success">Perfect!</p>
-                        <p className="text-sm text-muted-foreground">Gesture detected successfully</p>
+                        <p className="text-sm text-muted-foreground">Pose detected successfully</p>
                       </div>
                     </>
                   ) : (
@@ -223,7 +223,7 @@ const GestureTrainingMode = ({ onComplete, onExit }: GestureTrainingModeProps) =
                       <XCircle className="w-8 h-8 text-destructive" />
                       <div>
                         <p className="font-bold text-destructive">Try Again</p>
-                        <p className="text-sm text-muted-foreground">Gesture not recognized</p>
+                        <p className="text-sm text-muted-foreground">Pose not recognized</p>
                       </div>
                     </>
                   )}
@@ -265,7 +265,7 @@ const GestureTrainingMode = ({ onComplete, onExit }: GestureTrainingModeProps) =
                     <span className="text-4xl font-bold text-accent">
                       {currentLessonIndex + 1}
                     </span>
-                    <span className="text-muted-foreground">/ {gestureLessons.length}</span>
+                    <span className="text-muted-foreground">/ {poseLessons.length}</span>
                   </div>
                   <h2 className="text-3xl font-bold mb-2">{currentLesson.name}</h2>
                   <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold border ${difficultyColors[currentLesson.difficulty]}`}>
@@ -314,7 +314,7 @@ const GestureTrainingMode = ({ onComplete, onExit }: GestureTrainingModeProps) =
               </Button>
               <Button
                 onClick={handleNext}
-                disabled={currentLessonIndex === gestureLessons.length - 1}
+                disabled={currentLessonIndex === poseLessons.length - 1}
                 variant="default"
                 className="flex-1 gap-2 py-6 rounded-xl bg-gradient-accent"
               >
@@ -353,12 +353,12 @@ const GestureTrainingMode = ({ onComplete, onExit }: GestureTrainingModeProps) =
         </div>
 
         {/* Completion Message */}
-        {completedLessons.size === gestureLessons.length && (
+        {completedLessons.size === poseLessons.length && (
           <div className="mt-8 gradient-card rounded-2xl p-8 border-2 border-success text-center animate-slide-in-up">
             <Trophy className="w-20 h-20 mx-auto mb-4 text-success animate-bounce" />
             <h2 className="text-4xl font-bold mb-2 text-success">Training Complete!</h2>
             <p className="text-lg text-muted-foreground mb-6">
-              You've mastered all gestures. Ready to take the quiz?
+              You've mastered all poses. Ready to take the quiz?
             </p>
             <Button
               onClick={onComplete}
@@ -375,4 +375,4 @@ const GestureTrainingMode = ({ onComplete, onExit }: GestureTrainingModeProps) =
   );
 };
 
-export default GestureTrainingMode;
+export default PoseTrainingMode;

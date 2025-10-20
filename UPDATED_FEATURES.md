@@ -15,7 +15,7 @@ This document outlines the **refined premium features** that have been integrate
 1. **Sound Effects System** - Now fully integrated into quiz gameplay
 2. **Performance Analytics Dashboard** - Beautiful charts and insights
 3. **Achievement System** - Unlockable badges with celebrations
-4. **Gesture Training Mode** - Interactive tutorial for gestures
+4. **Pose Training Mode** - Interactive tutorial for poses
 
 ---
 
@@ -78,7 +78,7 @@ This document outlines the **refined premium features** that have been integrate
 4. **Sharpshooter** (Rare) - Get 5 correct answers in a row
 5. **Quiz Master** (Legendary) - Complete all difficulty levels
 6. **On Fire!** (Epic) - Get 10 correct answers in a row
-7. **Gesture Guru** (Legendary) - Complete 3 levels using only gestures
+7. **Pose Guru** (Legendary) - Complete 3 levels using only poses
 8. **Challenge Accepted** (Epic) - Complete hard difficulty
 
 **How It Works:**
@@ -89,15 +89,15 @@ This document outlines the **refined premium features** that have been integrate
 
 ---
 
-### 4. **👋 Gesture Training Mode**
+### 4. **👋 Pose Training Mode**
 
 **What It Does:**
-- Interactive tutorial to learn hand gestures
+- Interactive tutorial to learn body poses
 - Step-by-step guided practice
 - Real-time feedback on accuracy
 
 **Features:**
-- 6 gesture lessons (A, B, C, D, Next, Previous)
+- 6 pose lessons (A, B, C, D, Next, Previous)
 - Difficulty progression (Easy → Medium → Hard)
 - Pro tips for each gesture
 - Accuracy tracking and statistics
@@ -154,7 +154,7 @@ This document outlines the **refined premium features** that have been integrate
    - Sound Effects demo
    - Performance Analytics
    - Achievement System
-   - Gesture Training
+   - Pose Training
 
 ---
 
@@ -200,7 +200,7 @@ The difficulty selection screen is now fully functional:
    ↓
 3. If "View Features" → Explore showcase
    ↓
-4. Try Gesture Training (optional)
+4. Try Pose Training (optional)
    ↓
 5. Back to home → Start Quiz
    ↓
@@ -420,9 +420,9 @@ if (difficulty === 'hard' && completed) → Unlock
 ### **4. Test Training:**
 ```
 1. Go to /showcase
-2. Click "Gesture Training" card
+2. Click "Pose Training" card
 3. Click "Start Practice"
-4. Show hand gesture to camera
+4. Show body pose to camera
 5. Get real-time feedback
 ```
 
@@ -465,7 +465,7 @@ Your Gesture Quiz now has:
 ✅ **Integrated Sound Effects** (automatic during gameplay)
 ✅ **Achievement System** (gamification)
 ✅ **Performance Analytics** (data-driven insights)
-✅ **Gesture Training** (interactive learning)
+✅ **Pose Training** (interactive learning)
 ✅ **Beautiful UI** (modern and polished)
 ✅ **No Backend** (pure frontend)
 ✅ **Production Ready** (optimized code)

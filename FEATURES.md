@@ -105,7 +105,7 @@ This document outlines all the premium frontend features that have been implemen
   - **Sharpshooter** - Get 5 correct in a row
   - **Quiz Master** - Complete all difficulty levels
   - **On Fire!** - Get 10 correct in a row
-  - **Gesture Guru** - Complete 3 levels using only gestures
+  - **Pose Guru** - Complete 3 levels using only poses
   - **Challenge Accepted** - Complete hard difficulty
 - Rarity system: Common, Rare, Epic, Legendary
 - Animated notifications with confetti
@@ -126,7 +126,7 @@ This document outlines all the premium frontend features that have been implemen
 
 ---
 
-### 5. **Gesture Training Mode** 👋
+### 5. **Pose Training Mode** 👋
 **Location:** `/showcase` → Training
 
 **Description:**
@@ -291,7 +291,7 @@ The analytics system tracks:
 
 ## 🎓 **Educational Value**
 
-1. **Gesture Training**: Learn proper hand gestures
+1. **Pose Training**: Learn proper body poses
 2. **Performance Feedback**: Understand your progress
 3. **Achievement Goals**: Motivate improvement
 4. **Visual Learning**: Charts and graphs
@@ -330,7 +330,7 @@ While not implemented (no backend), these could be added:
 ## 📝 **Usage Examples**
 
 ### For Students:
-1. Start with Gesture Training
+1. Start with Pose Training
 2. Take quizzes at increasing difficulty
 3. Review Performance Analytics
 4. Unlock achievements

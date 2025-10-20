@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Trophy, Star, Zap, Target, Award, Crown, Flame, Sparkles } from 'lucide-react';
-import confetti from 'canvas-confetti';
 
 export interface Achievement {
   id: string;
@@ -20,24 +19,9 @@ interface AchievementNotificationProps {
 
 const AchievementNotification = ({ achievement, onClose }: AchievementNotificationProps) => {
   useEffect(() => {
-    // Trigger confetti
-    const colors = {
-      common: ['#94a3b8', '#cbd5e1'],
-      rare: ['#3b82f6', '#60a5fa'],
-      epic: ['#a855f7', '#c084fc'],
-      legendary: ['#f59e0b', '#fbbf24', '#fcd34d']
-    };
-
-    confetti({
-      particleCount: 100,
-      spread: 70,
-      origin: { y: 0.6 },
-      colors: colors[achievement.rarity]
-    });
-
     const timer = setTimeout(onClose, 5000);
     return () => clearTimeout(timer);
-  }, [achievement, onClose]);
+  }, [onClose]);
 
   const rarityColors = {
     common: 'from-slate-500 to-slate-600',
@@ -155,9 +139,9 @@ export const useAchievements = () => {
       rarity: 'epic'
     },
     {
-      id: 'gesture-guru',
-      title: 'Gesture Guru',
-      description: 'Complete 3 levels using only gestures',
+      id: 'pose-guru',
+      title: 'Pose Guru',
+      description: 'Complete 3 levels using only poses',
       icon: <Sparkles className="w-8 h-8 text-pink-500" />,
       unlocked: false,
       progress: 0,

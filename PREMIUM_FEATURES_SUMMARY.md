@@ -32,7 +32,7 @@ Your Gesture Quiz app now has **6 CEO-worthy premium features** - all frontend, 
 - Rarity levels
 - **Access:** Unlocks during gameplay
 
-### 5. 👋 **Gesture Training Mode**
+### 5. 👋 **Pose Training Mode**
 - Interactive tutorials
 - Real-time feedback
 - Progress tracking

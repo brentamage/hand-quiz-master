@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Hand, Zap } from 'lucide-react';
+import { Sparkles, User, Zap } from 'lucide-react';
 
 interface CinematicIntroProps {
   onComplete: () => void;
@@ -107,7 +107,7 @@ const CinematicIntro = ({ onComplete }: CinematicIntroProps) => {
                   </motion.div>
                 ))}
                 
-                <Hand className="w-32 h-32 text-purple-400 relative z-10" />
+                <User className="w-32 h-32 text-purple-400 relative z-10" />
               </motion.div>
             </motion.div>
           )}
@@ -138,7 +138,7 @@ const CinematicIntro = ({ onComplete }: CinematicIntroProps) => {
                     repeat: Infinity
                   }}
                 >
-                  Gesture Quiz
+                  Pose Quiz
                 </motion.h1>
                 
                 {/* Glitch layers */}
@@ -154,7 +154,7 @@ const CinematicIntro = ({ onComplete }: CinematicIntroProps) => {
                     repeatDelay: 2
                   }}
                 >
-                  Gesture Quiz
+                  Pose Quiz
                 </motion.h1>
                 
                 <motion.h1
@@ -170,7 +170,7 @@ const CinematicIntro = ({ onComplete }: CinematicIntroProps) => {
                     delay: 0.1
                   }}
                 >
-                  Gesture Quiz
+                  Pose Quiz
                 </motion.h1>
               </div>
 
@@ -189,7 +189,7 @@ const CinematicIntro = ({ onComplete }: CinematicIntroProps) => {
                   animate={{ opacity: 1 }}
                   className="space-y-4"
                 >
-                  <TypewriterText text="Control with your hands" />
+                  <TypewriterText text="Control with your body" />
                   
                   <motion.div
                     initial={{ scale: 0 }}

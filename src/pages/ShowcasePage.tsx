@@ -1,17 +1,16 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Sparkles, Trophy, Volume2, Hand, BarChart3, Play } from 'lucide-react';
+import { ArrowLeft, Sparkles, Trophy, Volume2, BarChart3, Play } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { SoundToggle, useSoundEffects } from '@/components/SoundEffects';
 import EnhancedLeaderboard from '@/components/EnhancedLeaderboard';
 import AchievementNotification, { useAchievements } from '@/components/AchievementSystem';
-import GestureTrainingMode from '@/components/GestureTrainingMode';
 import BackToMenuButton from '@/components/BackToMenuButton';
 import ThemeToggle from '@/components/ThemeToggle';
 import TiltCard from '@/components/TiltCard';
 
-type ShowcaseView = 'menu' | 'sounds' | 'analytics' | 'achievements' | 'training';
+type ShowcaseView = 'menu' | 'sounds' | 'analytics' | 'achievements';
 
 const ShowcasePage = () => {
   const navigate = useNavigate();
@@ -68,14 +67,6 @@ const ShowcasePage = () => {
       description: 'Unlock badges with animated celebrations',
       color: 'from-amber-500 to-amber-600',
       demo: 'Trigger achievement unlocks'
-    },
-    {
-      id: 'training' as ShowcaseView,
-      icon: <Hand className="w-12 h-12" />,
-      title: 'Gesture Training',
-      description: 'Interactive tutorial for mastering gestures',
-      color: 'from-pink-500 to-pink-600',
-      demo: 'Practice hand gestures'
     }
   ];
 
@@ -99,7 +90,7 @@ const ShowcasePage = () => {
                 { name: 'Hover', action: soundEffects.playHover, color: 'cyan-500' },
                 { name: 'Level Complete', action: soundEffects.playLevelComplete, color: 'amber-500' },
                 { name: 'Achievement', action: soundEffects.playAchievement, color: 'purple-500' },
-                { name: 'Gesture Detected', action: soundEffects.playGestureDetected, color: 'pink-500' },
+                { name: 'Pose Detected', action: soundEffects.playGestureDetected, color: 'pink-500' },
                 { name: 'Whoosh', action: soundEffects.playWhoosh, color: 'green-500' }
               ].map((sound, i) => (
                 <Button
@@ -198,14 +189,6 @@ const ShowcasePage = () => {
           </div>
         );
 
-      case 'training':
-        return (
-          <GestureTrainingMode
-            onComplete={() => setCurrentView('menu')}
-            onExit={() => setCurrentView('menu')}
-          />
-        );
-
       default:
         return (
           <div className="space-y-12">
@@ -280,7 +263,7 @@ const ShowcasePage = () => {
 
       {/* Content */}
       <div className="container mx-auto max-w-7xl relative z-10">
-        {currentView !== 'menu' && currentView !== 'training' && (
+        {currentView !== 'menu' && (
           <Button
             onClick={() => setCurrentView('menu')}
             variant="ghost"

@@ -6,7 +6,6 @@ import EnhancedLeaderboard from '@/components/EnhancedLeaderboard';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useSoundEffects } from '@/components/SoundEffects';
 import { useEffect } from 'react';
-import confetti from 'canvas-confetti';
 
 const LeaderboardPage = () => {
   const navigate = useNavigate();
@@ -15,7 +14,6 @@ const LeaderboardPage = () => {
   
   // Get state from navigation (passed or failed)
   const passed = location.state?.passed || false;
-  const showConfetti = location.state?.showConfetti || false;
 
   useEffect(() => {
     // Play appropriate sound
@@ -24,45 +22,7 @@ const LeaderboardPage = () => {
     } else {
       soundEffects.playFail();
     }
-
-    // Show confetti only if passed and showConfetti is true
-    if (passed && showConfetti) {
-      const duration = 3000;
-      const end = Date.now() + duration;
-      const colors = ['#c084fc', '#a855f7', '#9333ea', '#7c3aed', '#6366f1'];
-
-      (function frame() {
-        confetti({
-          particleCount: 3,
-          angle: 60,
-          spread: 55,
-          origin: { x: 0 },
-          colors: colors
-        });
-        confetti({
-          particleCount: 3,
-          angle: 120,
-          spread: 55,
-          origin: { x: 1 },
-          colors: colors
-        });
-
-        if (Date.now() < end) {
-          requestAnimationFrame(frame);
-        }
-      }());
-
-      // Big burst in the center
-      setTimeout(() => {
-        confetti({
-          particleCount: 100,
-          spread: 70,
-          origin: { y: 0.6 },
-          colors: colors
-        });
-      }, 200);
-    }
-  }, [passed, showConfetti, soundEffects]);
+  }, [passed, soundEffects]);
 
   return (
     <div className="min-h-screen py-12 px-4">
