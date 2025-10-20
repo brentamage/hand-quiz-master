@@ -1,7 +1,7 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Home, RotateCcw } from 'lucide-react';
+import { Home, RotateCcw, Trophy, BarChart3 } from 'lucide-react';
 import EnhancedLeaderboard from '@/components/EnhancedLeaderboard';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useSoundEffects } from '@/components/SoundEffects';
@@ -35,9 +35,16 @@ const LeaderboardPage = () => {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-12"
         >
-          <h1 className="text-6xl font-bold mb-4 text-shimmer">
-            {passed ? '🏆 Congratulations!' : '📊 Quiz Complete'}
-          </h1>
+          <div className="flex items-center justify-center gap-4 mb-4">
+            {passed ? (
+              <Trophy className="w-16 h-16 text-yellow-500 animate-pulse" />
+            ) : (
+              <BarChart3 className="w-16 h-16 text-blue-500" />
+            )}
+            <h1 className="text-6xl font-bold text-shimmer">
+              {passed ? 'Congratulations!' : 'Quiz Complete'}
+            </h1>
+          </div>
           <div className="h-1 w-24 mx-auto bg-gradient-accent rounded-full mb-6"></div>
           <p className="text-muted-foreground text-xl">
             {passed 

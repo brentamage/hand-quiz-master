@@ -23,6 +23,7 @@ import AchievementNotification, { useAchievements } from "@/components/Achieveme
 import BackToMenuButton from "@/components/BackToMenuButton";
 import { loadProfile, updateStatsAfterQuiz, addXP, checkBadges } from "@/utils/profileManager";
 import { UserProfile } from "@/types/profile";
+import { saveToLeaderboard } from "@/utils/leaderboardManager";
 
 type GameState = 'welcome' | 'difficulty-select' | 'loading' | 'playing' | 'level-complete' | 'final-results';
 
@@ -55,6 +56,8 @@ const Index = () => {
   const [loadingDifficulty, setLoadingDifficulty] = useState<DifficultyLevel>('easy');
   const webcamContainerRef = useRef<HTMLDivElement>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [quizStartTime, setQuizStartTime] = useState<number>(0);
+  const [scoreSaved, setScoreSaved] = useState(false);
 
   // Sound effects and achievements
   const soundEffects = useSoundEffects();
@@ -65,6 +68,28 @@ const Index = () => {
     const profile = loadProfile();
     setUserProfile(profile);
   }, []);
+
+  // Save to leaderboard when quiz completes
+  useEffect(() => {
+    if (gameState === 'final-results' && !scoreSaved && userProfile) {
+      const totalScore = getTotalScore();
+      const totalAnsweredQuestions = getTotalAnsweredQuestions();
+      const percentage = totalAnsweredQuestions > 0 ? Math.round((totalScore / totalAnsweredQuestions) * 100) : 0;
+      const timeSpent = Math.floor((Date.now() - quizStartTime) / 1000); // in seconds
+
+      // Save to leaderboard
+      saveToLeaderboard({
+        name: userProfile.displayName,
+        score: totalScore,
+        totalQuestions: totalAnsweredQuestions,
+        percentage: percentage,
+        timeSpent: timeSpent
+      });
+
+      setScoreSaved(true);
+      toast.success('Score saved to leaderboard!');
+    }
+  }, [gameState, scoreSaved, userProfile, quizStartTime]);
 
   const currentDifficulty = DIFFICULTY_ORDER[currentDifficultyIndex];
   const currentQuestion = questions[currentQuestionIndex];
@@ -129,6 +154,8 @@ const Index = () => {
     setLevelResults([]);
     setCorrectStreak(0);
     setLevelStartTime(Date.now());
+    setQuizStartTime(Date.now()); // Track overall quiz start time
+    setScoreSaved(false); // Reset score saved flag
     setGameState('playing');
     soundEffects.playLoadingComplete();
   }, [loadingDifficulty]);
@@ -779,8 +806,16 @@ const Index = () => {
               Restart Quiz
             </Button>
             <Button
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/leaderboard')}
               className="px-8 py-6 text-lg bg-gradient-accent text-black dark:text-white rounded-xl"
+            >
+              <Trophy className="w-5 h-5 mr-2" />
+              View Leaderboard
+            </Button>
+            <Button
+              onClick={() => navigate('/')}
+              variant="secondary"
+              className="px-8 py-6 text-lg rounded-xl"
             >
               Back to Home
             </Button>

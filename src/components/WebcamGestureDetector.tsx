@@ -197,12 +197,18 @@ const WebcamGestureDetector = ({
           try {
             const startTime = performance.now();
             
-            if (!webcamRef.current) {
+            if (!webcamRef.current || !modelRef.current) {
               return;
             }
             
             // Get pose and predictions
             const { pose, posenetOutput } = await modelRef.current.estimatePose(webcamRef.current);
+            
+            // Check if posenetOutput is valid before predicting
+            if (!posenetOutput) {
+              return;
+            }
+            
             const predictions = await modelRef.current.predict(posenetOutput);
             
             const endTime = performance.now();
