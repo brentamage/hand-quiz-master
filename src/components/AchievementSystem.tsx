@@ -206,6 +206,14 @@ export const useAchievements = () => {
         }
       }
 
+      // Quiz Master - Complete all difficulty levels
+      // This is triggered when totalQuestions >= 15 (5 questions per level x 3 levels)
+      if (stats.totalQuestions >= 15 && !updated[4].unlocked) {
+        updated[4].unlocked = true;
+        updated[4].progress = 3;
+        newUnlock = updated[4];
+      }
+
       // Hard Mode
       if (stats.difficulty === 'hard' && stats.score > 0 && !updated[7].unlocked) {
         updated[7].unlocked = true;

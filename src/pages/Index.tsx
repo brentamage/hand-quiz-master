@@ -86,10 +86,21 @@ const Index = () => {
         timeSpent: timeSpent
       });
 
+      // Check for Quiz Master achievement (completed all 3 difficulty levels)
+      if (levelResults.length === 3) {
+        checkAchievements({
+          score: totalScore,
+          totalQuestions: totalAnsweredQuestions,
+          timeSpent: timeSpent,
+          correctStreak: 0,
+          difficulty: 'hard' // Use hard to indicate all levels completed
+        });
+      }
+
       setScoreSaved(true);
       toast.success('Score saved to leaderboard!');
     }
-  }, [gameState, scoreSaved, userProfile, quizStartTime]);
+  }, [gameState, scoreSaved, userProfile, quizStartTime, levelResults, checkAchievements]);
 
   const currentDifficulty = DIFFICULTY_ORDER[currentDifficultyIndex];
   const currentQuestion = questions[currentQuestionIndex];
@@ -105,43 +116,6 @@ const Index = () => {
     }
   }, [currentQuestionIndex, gameState, answers]);
 
-  // Show final results with progress and answers
-  const renderFinalResults = () => {
-    const totalScore = getTotalScore();
-    const totalQuestions = getTotalQuestions();
-    const percentage = totalQuestions > 0 ? Math.round((totalScore / totalQuestions) * 100) : 0;
-    const passed = percentage >= PASSING_SCORE;
-    const completedAllLevels = levelResults.length === 3;
-
-    if (completedAllLevels && passed) {
-      soundEffects.playLevelComplete();
-    }
-
-    return (
-      <div className="min-h-screen py-12 px-4 bg-background">
-        <div className="container mx-auto max-w-7xl">
-          <div className="text-center mb-12">
-            <Trophy className="w-24 h-24 mx-auto mb-6 text-yellow-500" />
-            <h1 className="text-5xl font-bold mb-4">Quiz Completed!</h1>
-            <div className="h-1 w-24 mx-auto bg-gradient-accent rounded-full mb-8"></div>
-            
-            <div className="holographic-card animated-gradient-border rounded-3xl p-10 shadow-depth mb-8 max-w-2xl mx-auto">
-              <p className="text-muted-foreground text-2xl mb-4">Your Final Score</p>
-              <p className="text-8xl font-bold text-accent mb-2">
-                {totalScore}<span className="text-4xl text-muted-foreground">/{totalAnsweredQuestions}</span>
-              </p>
-              <p className={`text-4xl font-semibold ${passed ? 'text-green-500' : 'text-red-500'}`}>
-                {percentage}% {passed ? '✅' : '❌'}
-              </p>
-              <p className="mt-4 text-xl text-muted-foreground">
-                {passed ? 'Congratulations! You passed!' : 'Keep practicing to improve your score!'}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   const onLoadingComplete = useCallback(() => {
     const difficultyIndex = DIFFICULTY_ORDER.indexOf(loadingDifficulty);
@@ -237,6 +211,29 @@ const Index = () => {
       if (currentQuestion && selectedOption !== null && selectedOption === currentQuestion.correctAnswer) {
         setCorrectStreak(prev => {
           const newStreak = prev + 1;
+          
+          // Check for First Blood achievement (first correct answer)
+          if (currentQuestionIndex === 0 && levelResults.length === 0) {
+            checkAchievements({
+              score: 1,
+              totalQuestions: 1,
+              timeSpent: 0,
+              correctStreak: 1,
+              difficulty: currentDifficulty
+            });
+          }
+          
+          // Check for streak achievements in real-time
+          if (newStreak === 5 || newStreak === 10) {
+            checkAchievements({
+              score: 0,
+              totalQuestions: 0,
+              timeSpent: 0,
+              correctStreak: newStreak,
+              difficulty: currentDifficulty
+            });
+          }
+          
           // Play streak sound on milestones
           if (newStreak === 3 || newStreak === 5 || newStreak % 10 === 0) {
             soundEffects.playStreak();
