@@ -80,35 +80,45 @@ const Index = () => {
     }
   }, [currentQuestionIndex, gameState, answers]);
 
-  // Redirect to leaderboard after completing all quizzes
-  useEffect(() => {
-    if (gameState === 'final-results') {
-      const totalScore = getTotalScore();
-      const totalQuestions = getTotalQuestions();
-      const percentage = totalQuestions > 0 ? Math.round((totalScore / totalQuestions) * 100) : 0;
-      const passed = percentage >= PASSING_SCORE;
+  // Show final results with progress and answers
+  const renderFinalResults = () => {
+    const totalScore = getTotalScore();
+    const totalQuestions = getTotalQuestions();
+    const percentage = totalQuestions > 0 ? Math.round((totalScore / totalQuestions) * 100) : 0;
+    const passed = percentage >= PASSING_SCORE;
+    const completedAllLevels = levelResults.length === 3;
 
-      // Check if all three difficulty levels were completed
-      const completedAllLevels = levelResults.length === 3;
-
-      // Redirect to leaderboard after a short delay
-      setTimeout(() => {
-        navigate('/leaderboard', { 
-          state: { 
-            passed
-          } 
-        });
-      }, 2000); // 2 second delay to show results briefly
+    if (completedAllLevels && passed) {
+      soundEffects.playLevelComplete();
     }
-  }, [gameState, levelResults, navigate]);
 
-  const startQuiz = (selectedDifficulty: DifficultyLevel) => {
-    setLoadingDifficulty(selectedDifficulty);
-    setGameState('loading');
-    soundEffects.playWhoosh();
+    return (
+      <div className="min-h-screen py-12 px-4 bg-background">
+        <div className="container mx-auto max-w-7xl">
+          <div className="text-center mb-12">
+            <Trophy className="w-24 h-24 mx-auto mb-6 text-yellow-500" />
+            <h1 className="text-5xl font-bold mb-4">Quiz Completed!</h1>
+            <div className="h-1 w-24 mx-auto bg-gradient-accent rounded-full mb-8"></div>
+            
+            <div className="holographic-card animated-gradient-border rounded-3xl p-10 shadow-depth mb-8 max-w-2xl mx-auto">
+              <p className="text-muted-foreground text-2xl mb-4">Your Final Score</p>
+              <p className="text-8xl font-bold text-accent mb-2">
+                {totalScore}<span className="text-4xl text-muted-foreground">/{totalAnsweredQuestions}</span>
+              </p>
+              <p className={`text-4xl font-semibold ${passed ? 'text-green-500' : 'text-red-500'}`}>
+                {percentage}% {passed ? '✅' : '❌'}
+              </p>
+              <p className="mt-4 text-xl text-muted-foreground">
+                {passed ? 'Congratulations! You passed!' : 'Keep practicing to improve your score!'}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
-  const onLoadingComplete = () => {
+  const onLoadingComplete = useCallback(() => {
     const difficultyIndex = DIFFICULTY_ORDER.indexOf(loadingDifficulty);
     const quizQuestions = getQuestionsByDifficulty(loadingDifficulty);
     setCurrentDifficultyIndex(difficultyIndex);
@@ -121,7 +131,13 @@ const Index = () => {
     setLevelStartTime(Date.now());
     setGameState('playing');
     soundEffects.playLoadingComplete();
-  };
+  }, [loadingDifficulty]);
+
+  const startQuiz = useCallback((difficulty: DifficultyLevel) => {
+    setLoadingDifficulty(difficulty);
+    setGameState('loading');
+    soundEffects.playWhoosh();
+  }, []);
 
   const startNextLevel = () => {
     const nextIndex = currentDifficultyIndex + 1;
@@ -183,8 +199,8 @@ const Index = () => {
   };
 
   const calculateScore = (levelAnswers: (number | null)[], levelQuestions: Question[]) => {
-    return levelAnswers.reduce((acc, answer, idx) => 
-      answer === levelQuestions[idx].correctAnswer ? acc + 1 : acc, 0
+    return levelAnswers.reduce((acc, answer, idx) =>
+      answer !== null && answer === levelQuestions[idx].correctAnswer ? acc + 1 : acc, 0
     );
   };
 
@@ -315,12 +331,19 @@ const Index = () => {
     return levelResults.reduce((acc, result) => acc + result.score, 0);
   };
 
+  const getTotalAnsweredQuestions = () => {
+    return levelResults.reduce((acc, result) => {
+      const answeredQuestions = result.answers.filter(answer => answer !== null).length;
+      return acc + answeredQuestions;
+    }, 0);
+  };
+
   const getTotalQuestions = () => {
     return levelResults.reduce((acc, result) => acc + result.totalQuestions, 0);
   };
 
   const getOverallPercentage = () => {
-    const total = getTotalQuestions();
+    const total = getTotalAnsweredQuestions();
     return total > 0 ? Math.round((getTotalScore() / total) * 100) : 0;
   };
 
@@ -621,12 +644,13 @@ const Index = () => {
   // Final Results Screen
   if (gameState === 'final-results') {
     const totalScore = getTotalScore();
+    const totalAnsweredQuestions = getTotalAnsweredQuestions();
     const totalQuestions = getTotalQuestions();
-    const percentage = getOverallPercentage();
+    const percentage = totalAnsweredQuestions > 0 ? Math.round((totalScore / totalAnsweredQuestions) * 100) : 0;
     const passed = percentage >= PASSING_SCORE;
 
     return (
-      <div className="min-h-screen py-12 px-4">
+      <div className="min-h-screen py-12 px-4 bg-background">
         <BackToMenuButton onRestart={handleRestart} />
         <ThemeToggle />
         <SoundToggle />
@@ -635,144 +659,131 @@ const Index = () => {
         )}
         
         <div className="container mx-auto max-w-7xl">
-          {/* Webcam stays active at top */}
-          <div className="flex justify-center mb-8 fade-in-up">
-            {showWebcam && (
-              <WebcamGestureDetector 
-                onGestureDetected={handleGestureDetected}
-                onPerformanceDetected={handlePerformanceDetected}
-              />
-            )}
-          </div>
-
-          <div className="max-w-5xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-12 fade-in-up">
-            {passed ? (
-              <>
-                <Trophy className="w-32 h-32 mx-auto mb-6 text-accent animate-pulse" />
-                <h1 className="text-7xl md:text-8xl font-bold mb-4 bg-gradient-success bg-clip-text text-transparent">
-                  Congratulations!
-                </h1>
-                <div className="h-1 w-32 mx-auto bg-gradient-success rounded-full mb-6"></div>
-                <p className="text-muted-foreground text-2xl">
-                  You've successfully completed all levels!
-                </p>
-              </>
-            ) : (
-              <>
-                <XCircle className="w-32 h-32 mx-auto mb-6 text-destructive" />
-                <h1 className="text-7xl md:text-8xl font-bold mb-4 text-destructive">
-                  Better Luck Next Time
-                </h1>
-                <div className="h-1 w-32 mx-auto bg-gradient-danger rounded-full mb-6"></div>
-                <p className="text-muted-foreground text-2xl">
-                  Keep practicing to improve your score!
-                </p>
-              </>
-            )}
-          </div>
-
-          {/* Overall Score Card */}
-          <div className={`gradient-card rounded-3xl p-10 shadow-elegant border mb-8 fade-in-up delay-200 hover-lift ${
-            passed ? 'border-success/30' : 'border-destructive/30'
-          }`}>
-            <div className="text-center mb-8">
-              <p className="text-muted-foreground mb-3 text-sm uppercase tracking-wider">Overall Score</p>
-              <p className={`text-8xl font-bold mb-3 ${passed ? 'text-success' : 'text-destructive'}`}>
-                {totalScore}/{totalQuestions}
+          <div className="text-center mb-12">
+            <Trophy className="w-24 h-24 mx-auto mb-6 text-yellow-500" />
+            <h1 className="text-5xl font-bold mb-4">Quiz Completed!</h1>
+            <div className="h-1 w-24 mx-auto bg-gradient-accent rounded-full mb-8"></div>
+            
+            <div className="holographic-card animated-gradient-border rounded-3xl p-10 shadow-depth mb-8 max-w-2xl mx-auto">
+              <p className="text-muted-foreground text-2xl mb-4">Your Final Score</p>
+              <p className="text-8xl font-bold text-accent mb-2">
+                {totalScore}<span className="text-4xl text-muted-foreground">/{totalAnsweredQuestions}</span>
               </p>
-              <p className={`text-4xl font-semibold ${passed ? 'text-success' : 'text-destructive'}`}>
-                {percentage}%
+              <p className={`text-4xl font-semibold ${passed ? 'text-green-500' : 'text-red-500'}`}>
+                {percentage}% {passed ? '✅' : '❌'}
               </p>
-              <p className="text-muted-foreground mt-4 text-lg">
-                {passed ? `Passed (${PASSING_SCORE}% required)` : `Failed (${PASSING_SCORE}% required)`}
+              <p className="mt-4 text-xl text-muted-foreground">
+                {passed ? 'Congratulations! You passed!' : 'Keep practicing to improve your score!'}
               </p>
             </div>
+          </div>
 
-            {/* Level Breakdown */}
-            <div className="grid md:grid-cols-3 gap-6 mb-8">
-              {levelResults.map((result) => {
-                const levelPercentage = Math.round((result.score / result.totalQuestions) * 100);
-                return (
-                  <div key={result.difficulty} className="bg-card/50 rounded-2xl p-6 border border-accent/10">
-                    <div className="flex items-center gap-3 mb-4">
-                      {result.difficulty === 'easy' && <Target className="w-8 h-8 text-green-500" />}
-                      {result.difficulty === 'medium' && <Zap className="w-8 h-8 text-yellow-500" />}
-                      {result.difficulty === 'hard' && <Trophy className="w-8 h-8 text-accent" />}
-                      <h3 className="text-xl font-bold capitalize">{result.difficulty}</h3>
-                    </div>
-                    <p className="text-3xl font-bold text-accent mb-1">{result.score}/{result.totalQuestions}</p>
-                    <p className="text-lg text-muted-foreground">{levelPercentage}%</p>
+          {/* Level-wise breakdown */}
+          <div className="grid md:grid-cols-3 gap-8 mb-12">
+            {levelResults.map((result, index) => {
+              const answeredQuestions = result.answers.filter(answer => answer !== null).length;
+              const levelPercentage = answeredQuestions > 0 ? Math.round((result.score / answeredQuestions) * 100) : 0;
+              return (
+                <div key={index} className="bg-card rounded-2xl p-6 shadow-lg">
+                  <div className="flex items-center gap-3 mb-4">
+                    {result.difficulty === 'easy' && <Target className="w-8 h-8 text-green-500" />}
+                    {result.difficulty === 'medium' && <Zap className="w-8 h-8 text-yellow-500" />}
+                    {result.difficulty === 'hard' && <Award className="w-8 h-8 text-red-500" />}
+                    <h3 className="text-xl font-bold">
+                      {result.difficulty.charAt(0).toUpperCase() + result.difficulty.slice(1)} Level
+                    </h3>
                   </div>
-                );
-              })}
-            </div>
+                  <p className="text-3xl font-bold mb-2">
+                    {result.score} <span className="text-muted-foreground">/ {answeredQuestions}</span>
+                  </p>
+                  <div className="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+                    <div 
+                      className="h-2.5 rounded-full bg-gradient-accent" 
+                      style={{ width: `${levelPercentage}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-muted-foreground">
+                    {levelPercentage}% Correct
+                  </p>
+                </div>
+              );
+            })}
+          </div>
 
-            {/* Detailed Review */}
+          {/* Detailed Answers */}
+          <div className="bg-card rounded-2xl p-6 shadow-lg mb-8">
+            <h2 className="text-2xl font-bold mb-6 text-center">Detailed Results</h2>
             <div className="space-y-6">
-              <h3 className="text-2xl font-bold mb-6 flex items-center gap-2">
-                <div className="h-8 w-1 bg-gradient-accent rounded-full"></div>
-                Complete Review
-              </h3>
-              
-              {levelResults.map((result) => (
-                <div key={result.difficulty} className="space-y-4">
-                  <h4 className="text-xl font-bold capitalize text-accent mb-4">
-                    {result.difficulty} Level Questions
-                  </h4>
-                  {result.questions.map((question, idx) => {
-                    const userAnswer = result.answers[idx];
-                    const isCorrect = userAnswer === question.correctAnswer;
-                    const wasAnswered = userAnswer !== null;
-
-                    return (
-                      <div key={question.id} className="bg-card/30 rounded-xl p-5 border border-accent/10 transition-elegant hover:border-accent/30 hover:bg-card/40">
-                        <div className="flex items-start gap-4">
-                          {isCorrect ? (
-                            <CheckCircle className="w-7 h-7 text-success flex-shrink-0 mt-1" />
-                          ) : (
-                            <XCircle className="w-7 h-7 text-destructive flex-shrink-0 mt-1" />
-                          )}
-                          <div className="flex-1">
-                            <p className="font-semibold mb-3 text-lg">{idx + 1}. {question.question}</p>
-                            {wasAnswered ? (
-                              <>
-                                <p className="text-sm text-muted-foreground">
-                                  Your answer: <span className={isCorrect ? 'text-success' : 'text-destructive'}>
-                                    {question.options[userAnswer]}
-                                  </span>
-                                </p>
-                                {!isCorrect && (
-                                  <p className="text-sm text-success">
-                                    Correct answer: {question.options[question.correctAnswer]}
-                                  </p>
+              {levelResults.map((result, levelIndex) => (
+                <div key={levelIndex} className="mb-8">
+                  <h3 className="text-xl font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                    {result.difficulty.charAt(0).toUpperCase() + result.difficulty.slice(1)} Level
+                  </h3>
+                  <div className="space-y-4">
+                    {result.questions.map((question, qIndex) => {
+                      const userAnswer = result.answers[qIndex];
+                      const isCorrect = userAnswer === question.correctAnswer;
+                      
+                      return (
+                        <div 
+                          key={qIndex} 
+                          className={`p-4 rounded-lg border ${
+                            isCorrect 
+                              ? 'border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-900/20' 
+                              : 'border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-900/20'
+                          }`}
+                        >
+                          <p className="font-medium mb-2">
+                            {qIndex + 1}. {question.question}
+                          </p>
+                          <div className="ml-4 space-y-1">
+                            {question.options.map((option, oIndex) => (
+                              <div 
+                                key={oIndex}
+                                className={`flex items-center ${
+                                  oIndex === question.correctAnswer 
+                                    ? 'text-green-600 dark:text-green-400 font-semibold' 
+                                    : ''
+                                } ${
+                                  userAnswer === oIndex && !isCorrect 
+                                    ? 'text-red-600 dark:text-red-400 line-through' 
+                                    : ''
+                                }`}
+                              >
+                                {oIndex === question.correctAnswer && (
+                                  <CheckCircle className="w-4 h-4 mr-2" />
                                 )}
-                              </>
-                            ) : (
-                              <p className="text-sm text-yellow-500">Not answered</p>
-                            )}
+                                {userAnswer === oIndex && !isCorrect && (
+                                  <XCircle className="w-4 h-4 mr-2 text-red-500" />
+                                )}
+                                <span>{String.fromCharCode(65 + oIndex)}. {option}</span>
+                              </div>
+                            ))}
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
               ))}
             </div>
-
-            {/* Action Buttons */}
-            <div className="mt-10 flex gap-4 justify-center flex-wrap">
-              <Button
-                onClick={handleRestart}
-                size="lg"
-                className="gap-3 bg-gradient-accent hover:opacity-90 px-8 py-6 text-lg rounded-xl transition-elegant hover:scale-105 shadow-elegant !text-black dark:!text-gray-100"
-              >
-                <RotateCcw className="w-6 h-6 text-black dark:text-gray-100" />
-                Try Again
-              </Button>
-            </div>
           </div>
+
+          <div className="flex justify-center gap-4 mt-12">
+            <Button
+              onClick={handleRestart}
+              variant="outline"
+              className="px-8 py-6 text-lg rounded-xl"
+            >
+              <RotateCcw className="w-5 h-5 mr-2" />
+              Restart Quiz
+            </Button>
+            <Button
+              onClick={() => navigate('/')}
+              className="px-8 py-6 text-lg bg-gradient-accent text-black dark:text-white rounded-xl"
+            >
+              Back to Home
+            </Button>
           </div>
         </div>
       </div>
