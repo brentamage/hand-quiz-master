@@ -118,6 +118,25 @@ const WebcamGestureDetector = ({
     };
   }, [onPerformanceDetected]);
 
+  // Cleanup camera stream on component unmount
+  useEffect(() => {
+    return () => {
+      // Stop all camera tracks when component unmounts
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => {
+          track.stop();
+          console.log("Camera track stopped");
+        });
+        streamRef.current = null;
+      }
+      
+      // Stop video element
+      if (webcamRef.current) {
+        webcamRef.current.srcObject = null;
+      }
+    };
+  }, []);
+
   // Main webcam and model initialization
   useEffect(() => {
     let isActive = true;
@@ -153,28 +172,52 @@ const WebcamGestureDetector = ({
         setLoadingMessage("Initializing camera...");
         
         // Use native stream directly for better compatibility
-        if (webcamRef.current && streamRef.current) {
-          webcamRef.current.srcObject = streamRef.current;
+        if (!webcamRef.current) {
+          throw new Error("Video element not found. Please refresh the page.");
+        }
+        
+        if (!streamRef.current) {
+          throw new Error("Camera stream not available. Please check camera permissions.");
+        }
+        
+        webcamRef.current.srcObject = streamRef.current;
+        
+        // Wait for video metadata to load
+        await new Promise<void>((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            reject(new Error("Camera initialization timeout"));
+          }, 10000); // 10 second timeout
           
-          // Ensure video plays
-          try {
+          if (webcamRef.current) {
+            webcamRef.current.onloadedmetadata = () => {
+              clearTimeout(timeout);
+              resolve();
+            };
+            webcamRef.current.onerror = (err) => {
+              clearTimeout(timeout);
+              reject(new Error("Video element error"));
+            };
+          }
+        });
+        
+        // Ensure video plays
+        try {
+          if (webcamRef.current) {
             await webcamRef.current.play();
             console.log("Video playing successfully");
-          } catch (playError) {
-            console.error("Error playing video:", playError);
-            // Try again after a short delay
-            setTimeout(async () => {
-              try {
-                if (webcamRef.current) {
-                  await webcamRef.current.play();
-                }
-              } catch (retryError) {
-                console.error("Retry failed:", retryError);
-              }
-            }, 500);
           }
-        } else {
-          throw new Error("Failed to initialize video element");
+        } catch (playError) {
+          console.error("Error playing video:", playError);
+          // Try again after a short delay
+          await new Promise(resolve => setTimeout(resolve, 500));
+          if (webcamRef.current) {
+            try {
+              await webcamRef.current.play();
+              console.log("Video playing after retry");
+            } catch (retryError) {
+              throw new Error("Failed to start video playback. Please check camera permissions and try again.");
+            }
+          }
         }
         
         setIsModelLoaded(true);
