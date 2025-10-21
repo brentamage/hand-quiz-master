@@ -76,12 +76,17 @@ const PoseSkeletonOverlay = ({
       const end = keypoints[endIdx];
 
       if (!start || !end) return;
+      
+      // Validate coordinates are finite
+      if (!isFinite(start.x) || !isFinite(start.y) || !isFinite(end.x) || !isFinite(end.y)) {
+        return;
+      }
 
       // Calculate average confidence for this connection
       const avgConfidence = (start.score + end.score) / 2;
       
       // Only draw if both points have reasonable confidence
-      if (avgConfidence > 0.3) {
+      if (avgConfidence > 0.3 && isFinite(avgConfidence)) {
         // Color based on confidence
         const color = getConfidenceColor(avgConfidence);
         ctx.strokeStyle = color;
@@ -98,39 +103,50 @@ const PoseSkeletonOverlay = ({
       if (!keypoint || keypoint.score < 0.3) return;
 
       const { x, y, score } = keypoint;
+      
+      // Validate coordinates are finite numbers
+      if (!isFinite(x) || !isFinite(y) || !isFinite(score)) {
+        console.warn(`Invalid keypoint data at index ${index}:`, { x, y, score });
+        return;
+      }
+      
       const color = getConfidenceColor(score);
       const radius = 6;
 
-      // Draw outer glow
-      const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius * 2);
-      gradient.addColorStop(0, color);
-      gradient.addColorStop(1, 'transparent');
-      ctx.fillStyle = gradient;
-      ctx.beginPath();
-      ctx.arc(x, y, radius * 2, 0, 2 * Math.PI);
-      ctx.fill();
+      try {
+        // Draw outer glow
+        const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius * 2);
+        gradient.addColorStop(0, color);
+        gradient.addColorStop(1, 'transparent');
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(x, y, radius * 2, 0, 2 * Math.PI);
+        ctx.fill();
 
-      // Draw keypoint circle
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, 2 * Math.PI);
-      ctx.fill();
+        // Draw keypoint circle
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, 2 * Math.PI);
+        ctx.fill();
 
-      // Draw white center
-      ctx.fillStyle = 'white';
-      ctx.beginPath();
-      ctx.arc(x, y, radius / 2, 0, 2 * Math.PI);
-      ctx.fill();
-
-      // Draw confidence text for important keypoints
-      if (showConfidence && (index === 0 || index === 5 || index === 6)) {
+        // Draw white center
         ctx.fillStyle = 'white';
-        ctx.font = '12px Arial';
-        ctx.strokeStyle = 'black';
-        ctx.lineWidth = 3;
-        const text = `${Math.round(score * 100)}%`;
-        ctx.strokeText(text, x + 10, y - 10);
-        ctx.fillText(text, x + 10, y - 10);
+        ctx.beginPath();
+        ctx.arc(x, y, radius / 2, 0, 2 * Math.PI);
+        ctx.fill();
+
+        // Draw confidence text for important keypoints
+        if (showConfidence && (index === 0 || index === 5 || index === 6)) {
+          ctx.fillStyle = 'white';
+          ctx.font = '12px Arial';
+          ctx.strokeStyle = 'black';
+          ctx.lineWidth = 3;
+          const text = `${Math.round(score * 100)}%`;
+          ctx.strokeText(text, x + 10, y - 10);
+          ctx.fillText(text, x + 10, y - 10);
+        }
+      } catch (error) {
+        console.error(`Error drawing keypoint ${index}:`, error);
       }
     });
   };

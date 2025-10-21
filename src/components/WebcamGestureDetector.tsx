@@ -143,6 +143,9 @@ const WebcamGestureDetector = ({
 
     const initWebcam = async () => {
       try {
+        // Wait a bit for the DOM to be ready
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         setLoadingMessage("Loading AI pose model...");
         
         // Load Teachable Machine pose model
@@ -171,9 +174,13 @@ const WebcamGestureDetector = ({
         
         setLoadingMessage("Initializing camera...");
         
-        // Use native stream directly for better compatibility
+        // Ensure video element is ready
         if (!webcamRef.current) {
-          throw new Error("Video element not found. Please refresh the page.");
+          // Wait a bit more and try again
+          await new Promise(resolve => setTimeout(resolve, 200));
+          if (!webcamRef.current) {
+            throw new Error("Video element not found. Please refresh the page.");
+          }
         }
         
         if (!streamRef.current) {
