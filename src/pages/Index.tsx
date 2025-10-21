@@ -249,50 +249,54 @@ const Index = () => {
       setSelectedOption(answers[currentQuestionIndex + 1]);
       soundEffects.playQuestionChange();
     } else {
-      // Level completed
-      const score = calculateScore(answers, questions);
-      const timeSpent = Math.floor((Date.now() - levelStartTime) / 1000);
-      const percentage = Math.round((score / questions.length) * 100);
-      
-      // Play sound based on performance
-      if (percentage === 100) {
-        soundEffects.playPerfect();
-      } else if (percentage >= 70) {
-        soundEffects.playLevelComplete();
-      } else {
-        soundEffects.playFail();
-      }
-      
-      const levelResult: LevelResult = {
-        difficulty: currentDifficulty,
-        score,
-        totalQuestions: questions.length,
-        answers: [...answers],
-        questions: [...questions]
-      };
-      
-      const newLevelResults = [...levelResults, levelResult];
-      setLevelResults(newLevelResults);
-      
-      // Check achievements
-      checkAchievements({
-        score,
-        totalQuestions: questions.length,
-        timeSpent,
-        correctStreak,
-        difficulty: currentDifficulty
+      // Level completed - use functional state update to get latest answers
+      setAnswers(currentAnswers => {
+        const score = calculateScore(currentAnswers, questions);
+        const timeSpent = Math.floor((Date.now() - levelStartTime) / 1000);
+        const percentage = Math.round((score / questions.length) * 100);
+        
+        // Play sound based on performance
+        if (percentage === 100) {
+          soundEffects.playPerfect();
+        } else if (percentage >= 70) {
+          soundEffects.playLevelComplete();
+        } else {
+          soundEffects.playFail();
+        }
+        
+        const levelResult: LevelResult = {
+          difficulty: currentDifficulty,
+          score,
+          totalQuestions: questions.length,
+          answers: [...currentAnswers],
+          questions: [...questions]
+        };
+        
+        const newLevelResults = [...levelResults, levelResult];
+        setLevelResults(newLevelResults);
+        
+        // Check achievements
+        checkAchievements({
+          score,
+          totalQuestions: questions.length,
+          timeSpent,
+          correctStreak,
+          difficulty: currentDifficulty
+        });
+        
+        // Check if there are more levels to complete
+        const isLastLevel = currentDifficultyIndex === DIFFICULTY_ORDER.length - 1;
+        
+        if (isLastLevel) {
+          // Completed the last level - show final results
+          setGameState('final-results');
+        } else {
+          // More levels to go - show level complete screen
+          setGameState('level-complete');
+        }
+        
+        return currentAnswers; // Return unchanged to avoid unnecessary re-render
       });
-      
-      // Check if there are more levels to complete
-      const isLastLevel = currentDifficultyIndex === DIFFICULTY_ORDER.length - 1;
-      
-      if (isLastLevel) {
-        // Completed the last level - show final results
-        setGameState('final-results');
-      } else {
-        // More levels to go - show level complete screen
-        setGameState('level-complete');
-      }
     }
   };
 

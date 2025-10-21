@@ -76,91 +76,137 @@ interface AchievementSystemProps {
   difficulty: string;
 }
 
-export const useAchievements = () => {
-  const [achievements, setAchievements] = useState<Achievement[]>([
-    {
-      id: 'first-blood',
-      title: 'First Blood',
-      description: 'Answer your first question correctly',
-      icon: <Star className="w-8 h-8 text-blue-500" />,
-      unlocked: false,
-      progress: 0,
-      maxProgress: 1,
-      rarity: 'common'
-    },
-    {
-      id: 'perfect-score',
-      title: 'Perfectionist',
-      description: 'Get 100% on any level',
-      icon: <Trophy className="w-8 h-8 text-amber-500" />,
-      unlocked: false,
-      progress: 0,
-      maxProgress: 1,
-      rarity: 'rare'
-    },
-    {
-      id: 'speed-demon',
-      title: 'Speed Demon',
-      description: 'Complete a level in under 60 seconds',
-      icon: <Zap className="w-8 h-8 text-yellow-500" />,
-      unlocked: false,
-      progress: 0,
-      maxProgress: 1,
-      rarity: 'epic'
-    },
-    {
-      id: 'sharpshooter',
-      title: 'Sharpshooter',
-      description: 'Get 5 correct answers in a row',
-      icon: <Target className="w-8 h-8 text-green-500" />,
-      unlocked: false,
-      progress: 0,
-      maxProgress: 5,
-      rarity: 'rare'
-    },
-    {
-      id: 'master',
-      title: 'Quiz Master',
-      description: 'Complete all difficulty levels',
-      icon: <Crown className="w-8 h-8 text-purple-500" />,
-      unlocked: false,
-      progress: 0,
-      maxProgress: 3,
-      rarity: 'legendary'
-    },
-    {
-      id: 'hot-streak',
-      title: 'On Fire!',
-      description: 'Get 10 correct answers in a row',
-      icon: <Flame className="w-8 h-8 text-orange-500" />,
-      unlocked: false,
-      progress: 0,
-      maxProgress: 10,
-      rarity: 'epic'
-    },
-    {
-      id: 'pose-guru',
-      title: 'Pose Guru',
-      description: 'Complete 3 levels using only poses',
-      icon: <Sparkles className="w-8 h-8 text-pink-500" />,
-      unlocked: false,
-      progress: 0,
-      maxProgress: 3,
-      rarity: 'legendary'
-    },
-    {
-      id: 'hard-mode',
-      title: 'Challenge Accepted',
-      description: 'Complete hard difficulty',
-      icon: <Award className="w-8 h-8 text-red-500" />,
-      unlocked: false,
-      progress: 0,
-      maxProgress: 1,
-      rarity: 'epic'
-    }
-  ]);
+const getDefaultAchievements = (): Achievement[] => [
+  {
+    id: 'first-blood',
+    title: 'First Blood',
+    description: 'Answer your first question correctly',
+    icon: <Star className="w-8 h-8 text-blue-500" />,
+    unlocked: false,
+    progress: 0,
+    maxProgress: 1,
+    rarity: 'common'
+  },
+  {
+    id: 'perfect-score',
+    title: 'Perfectionist',
+    description: 'Get 100% on any level',
+    icon: <Trophy className="w-8 h-8 text-amber-500" />,
+    unlocked: false,
+    progress: 0,
+    maxProgress: 1,
+    rarity: 'rare'
+  },
+  {
+    id: 'speed-demon',
+    title: 'Speed Demon',
+    description: 'Complete a level in under 60 seconds',
+    icon: <Zap className="w-8 h-8 text-yellow-500" />,
+    unlocked: false,
+    progress: 0,
+    maxProgress: 1,
+    rarity: 'epic'
+  },
+  {
+    id: 'sharpshooter',
+    title: 'Sharpshooter',
+    description: 'Get 5 correct answers in a row',
+    icon: <Target className="w-8 h-8 text-green-500" />,
+    unlocked: false,
+    progress: 0,
+    maxProgress: 5,
+    rarity: 'rare'
+  },
+  {
+    id: 'master',
+    title: 'Quiz Master',
+    description: 'Complete all difficulty levels',
+    icon: <Crown className="w-8 h-8 text-purple-500" />,
+    unlocked: false,
+    progress: 0,
+    maxProgress: 3,
+    rarity: 'legendary'
+  },
+  {
+    id: 'hot-streak',
+    title: 'On Fire!',
+    description: 'Get 10 correct answers in a row',
+    icon: <Flame className="w-8 h-8 text-orange-500" />,
+    unlocked: false,
+    progress: 0,
+    maxProgress: 10,
+    rarity: 'epic'
+  },
+  {
+    id: 'pose-guru',
+    title: 'Pose Guru',
+    description: 'Complete 3 levels using only poses',
+    icon: <Sparkles className="w-8 h-8 text-pink-500" />,
+    unlocked: false,
+    progress: 0,
+    maxProgress: 3,
+    rarity: 'legendary'
+  },
+  {
+    id: 'hard-mode',
+    title: 'Challenge Accepted',
+    description: 'Complete hard difficulty',
+    icon: <Award className="w-8 h-8 text-red-500" />,
+    unlocked: false,
+    progress: 0,
+    maxProgress: 1,
+    rarity: 'epic'
+  }
+];
 
+const loadAchievementsFromStorage = (): Achievement[] => {
+  try {
+    const stored = localStorage.getItem('quiz-achievements');
+    if (stored) {
+      const savedData = JSON.parse(stored);
+      const defaults = getDefaultAchievements();
+      
+      // Merge saved data with defaults (in case new achievements were added)
+      return defaults.map(defaultAch => {
+        const saved = savedData.find((s: Achievement) => s.id === defaultAch.id);
+        if (saved) {
+          return {
+            ...defaultAch,
+            unlocked: saved.unlocked,
+            progress: saved.progress
+          };
+        }
+        return defaultAch;
+      });
+    }
+  } catch (e) {
+    console.error('Failed to load achievements:', e);
+  }
+  return getDefaultAchievements();
+};
+
+const saveAchievementsToStorage = (achievements: Achievement[]) => {
+  try {
+    const dataToSave = achievements.map(({ id, unlocked, progress, maxProgress }) => ({
+      id,
+      unlocked,
+      progress,
+      maxProgress
+    }));
+    localStorage.setItem('quiz-achievements', JSON.stringify(dataToSave));
+  } catch (e) {
+    console.error('Failed to save achievements:', e);
+  }
+};
+
+export const useAchievements = () => {
+  const [achievements, setAchievements] = useState<Achievement[]>(() => loadAchievementsFromStorage());
   const [notification, setNotification] = useState<Achievement | null>(null);
+
+  // Save achievements to localStorage whenever they change
+  useEffect(() => {
+    saveAchievementsToStorage(achievements);
+  }, [achievements]);
 
   const checkAchievements = (stats: AchievementSystemProps) => {
     setAchievements(prev => {
